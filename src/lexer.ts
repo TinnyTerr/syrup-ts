@@ -4,9 +4,9 @@
 // about layout/indentation).
 
 export type TokKind =
-  | "name" | "num" | "wild"
+  | "name" | "num" | "wild" | "tyname"
   | "arrow" | "lparen" | "rparen" | "lbrack" | "rbrack"
-  | "comma" | "eq" | "bang" | "amp" | "pipe"
+  | "comma" | "eq" | "bang" | "amp" | "pipe" | "at"
   | "where" | "experiment" | "eof";
 
 export interface Tok {
@@ -38,8 +38,6 @@ export function lex(src: string): Tok[] {
       i++;
       while (i < n && /[A-Za-z0-9]/.test(src[i]!)) i++;
       const word = src.slice(start, i);
-      // "<Bit>" style type token is handled by matching '<' below, but
-      // "Bit" itself never appears bare, so plain names fall through here.
       toks.push({ kind: KEYWORDS[word] ?? "name", value: word, pos: start });
       continue;
     }
@@ -59,11 +57,12 @@ export function lex(src: string): Tok[] {
       continue;
     }
     if (c === "<") {
-      // expect <Bit>
-      const m = /^<Bit>/.exec(src.slice(i));
-      if (!m) throw new LexError(`expected <Bit> at ${i}`);
+      // A type name, e.g. <Bit> or <Bit2>; the token's value is the bare
+      // name (no angle brackets) so the parser can look it up as an alias.
+      const m = /^<([A-Za-z][A-Za-z0-9]*)>/.exec(src.slice(i));
+      if (!m) throw new LexError(`expected a type name like <Bit> at ${i}`);
       i += m[0].length;
-      toks.push({ kind: "name", value: "<Bit>", pos: start });
+      toks.push({ kind: "tyname", value: m[1]!, pos: start });
       continue;
     }
     if (c === "-" && src[i + 1] === ">") {
@@ -73,7 +72,7 @@ export function lex(src: string): Tok[] {
     }
     const single: Record<string, TokKind> = {
       "(": "lparen", ")": "rparen", "[": "lbrack", "]": "rbrack",
-      ",": "comma", "=": "eq", "!": "bang", "&": "amp", "|": "pipe",
+      ",": "comma", "=": "eq", "!": "bang", "&": "amp", "|": "pipe", "@": "at",
     };
     const singleKind = single[c];
     if (singleKind) {
@@ -85,10 +84,4 @@ export function lex(src: string): Tok[] {
   }
   toks.push({ kind: "eof", value: "", pos: n });
   return toks;
-}
-
-// The <Bit> token is lexed above with kind "name" value "<Bit>"; give it a
-// dedicated predicate so the parser can tell it apart from a real name.
-export function isBitTok(t: Tok): boolean {
-  return t.kind === "name" && t.value === "<Bit>";
 }

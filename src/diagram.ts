@@ -19,8 +19,6 @@ type Ref = Origin[];
 interface GateNode {
   id: string;
   label: string;
-  insCount: number;
-  outsCount: number;
 }
 
 interface Edge {
@@ -95,7 +93,7 @@ function buildGraph(reg: Registry, name: string): Graph {
     const callee = reg.get(e.name);
     if (!callee) throw new RuntimeError(`\`${e.name}\` is not declared`);
     const id = `g${e.idx}`;
-    nodes.push({ id, label: e.name, insCount: callee.ins.length, outsCount: callee.outs.length });
+    nodes.push({ id, label: e.name });
 
     const argSlots = slotListOf(e.args);
     argSlots.forEach((ref, portIdx) => {
@@ -130,7 +128,6 @@ export function toMermaid(reg: Registry, name: string): string {
     if ("output" in e.to) maxOutput = Math.max(maxOutput, e.to.output);
   }
   const outCount = maxOutput + 1;
-  const nodeById = new Map(g.nodes.map((n) => [n.id, n]));
 
   const lines: string[] = [`flowchart LR`, `  subgraph ${sanitize(name)}["\`${name}\`"]`];
   for (const n of [...inputNames].sort()) {
@@ -146,30 +143,23 @@ export function toMermaid(reg: Registry, name: string): string {
   let litCounter = 0;
   for (const e of g.edges) {
     let fromId: string;
-    let fromLabel: string | undefined;
     if (e.from.k === "input") {
       fromId = `in_${sanitize(e.from.name)}`;
     } else if (e.from.k === "gate") {
       fromId = e.from.id;
-      const node = nodeById.get(e.from.id);
-      if (node && node.outsCount > 1) fromLabel = `${e.from.port}`;
     } else {
       fromId = `lit${litCounter++}`;
       lines.push(`    ${fromId}(("${e.from.bit}"))`);
     }
 
     let toId: string;
-    let toLabel: string | undefined;
     if ("output" in e.to) {
       toId = outCount > 1 ? `out${e.to.output}` : "out0";
     } else {
       toId = e.to.id;
-      const node = nodeById.get(e.to.id);
-      if (node && node.insCount > 1) toLabel = `${e.to.port}`;
     }
 
-    const label = [fromLabel, toLabel].filter((l) => l !== undefined).join("→");
-    lines.push(label ? `    ${fromId} -->|${label}| ${toId}` : `    ${fromId} --> ${toId}`);
+    lines.push(`    ${fromId} --> ${toId}`);
   }
 
   lines.push(`  end`);

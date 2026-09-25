@@ -112,8 +112,26 @@ function evalVar(frame: Frame, name: string, path: string, ctx: Ctx): Value {
   if (frame.computing.has(name)) {
     throw new RuntimeError(`combinational cycle involving \`${name}\``);
   }
-  frame.computing.add(name);
   const eqn = frame.def.eqns[eqnIdx]!;
+
+  // A register (dff/srff) that is the whole right side of a `where`
+  // equation can be fed back into its own input, e.g. `Q = dff(xor(Q,T))`.
+  // Its output for this step is just last step's state, independent of the
+  // argument expression, so bind it before evaluating the argument at
+  // all -- otherwise evaluating the argument (which mentions `Q`) would
+  // look like an ordinary combinational cycle.
+  const rhsExpr = eqn.rhs.length === 1 ? eqn.rhs[0]! : undefined;
+  if (rhsExpr?.k === "app" && (rhsExpr.name === "dff" || rhsExpr.name === "srff")) {
+    const childPath = `${path}.${rhsExpr.idx}`;
+    bindPatList(eqn.lhs, [peekMem(childPath, ctx)], frame.env);
+    frame.computing.add(name);
+    const args = evalExprList(rhsExpr.args, frame, path, ctx);
+    commitPrimitive(rhsExpr.name, args, childPath, ctx);
+    frame.computing.delete(name);
+    return frame.env.get(name)!;
+  }
+
+  frame.computing.add(name);
   const vals = evalExprList(eqn.rhs, frame, path, ctx);
   bindPatList(eqn.lhs, vals, frame.env);
   frame.computing.delete(name);
@@ -158,6 +176,38 @@ function bit01(v: Value, who: string): Bit {
   return v;
 }
 
+function peekMem(path: string, ctx: Ctx): Bit {
+  return ctx.mem.get(path) ?? 0;
+}
+
+// Computes next state for a memory primitive from its (already evaluated)
+// arguments and writes it to ctx.nextMem; shared by evalPrimitive's normal
+// path and evalVar's register-feedback path so the two can't drift apart.
+function commitPrimitive(name: string, args: Value[], path: string, ctx: Ctx): void {
+  switch (name) {
+    case "dff": {
+      const d = bit01(args[0]!, "dff");
+      ctx.nextMem.set(path, d);
+      return;
+    }
+    case "srff": {
+      const s = bit01(args[0]!, "srff");
+      const r = bit01(args[1]!, "srff");
+      const q = peekMem(path, ctx);
+      let next: Bit;
+      if (s === "X" || r === "X") next = "X";
+      else if (s === 0 && r === 0) next = q;
+      else if (s === 0 && r === 1) next = 0;
+      else if (s === 1 && r === 0) next = 1;
+      else next = "X"; // S=R=1: conflicting request
+      ctx.nextMem.set(path, next);
+      return;
+    }
+    default:
+      throw new RuntimeError(`\`${name}\` has no memory to commit`);
+  }
+}
+
 function evalPrimitive(name: string, args: Value[], path: string, ctx: Ctx): Value[] {
   switch (name) {
     case "nand": {
@@ -169,22 +219,13 @@ function evalPrimitive(name: string, args: Value[], path: string, ctx: Ctx): Val
     case "zero":
       return [0];
     case "dff": {
-      const d = bit01(args[0]!, "dff");
-      const q = ctx.mem.get(path) ?? 0;
-      ctx.nextMem.set(path, d);
+      const q = peekMem(path, ctx);
+      commitPrimitive(name, args, path, ctx);
       return [q];
     }
     case "srff": {
-      const s = bit01(args[0]!, "srff");
-      const r = bit01(args[1]!, "srff");
-      const q = ctx.mem.get(path) ?? 0;
-      let next: Bit;
-      if (s === "X" || r === "X") next = "X";
-      else if (s === 0 && r === 0) next = q;
-      else if (s === 0 && r === 1) next = 0;
-      else if (s === 1 && r === 0) next = 1;
-      else next = "X"; // S=R=1: conflicting request
-      ctx.nextMem.set(path, next);
+      const q = peekMem(path, ctx);
+      commitPrimitive(name, args, path, ctx);
       return [q];
     }
     default:

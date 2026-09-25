@@ -75,7 +75,13 @@ export interface Display {
   name: string;
 }
 
-export type Stmt = Decl | Def | ExpTruth | ExpEquiv | ExpSim | Display | Skip;
+export interface TypeDef {
+  k: "typeDef";
+  name: string;
+  ty: Ty;
+}
+
+export type Stmt = Decl | Def | ExpTruth | ExpEquiv | ExpSim | Display | Skip | TypeDef;
 
 // Assigns a per-definition-local index to every `app` node, in a fixed
 // deterministic (pre-order) traversal. This index, combined with the

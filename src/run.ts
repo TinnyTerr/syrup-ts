@@ -1,4 +1,4 @@
-import { splitStatements, parseChunk, ParseError } from "./parser";
+import { splitStatements, parseChunk, ParseError, type TypeAliases } from "./parser";
 import { newRegistry, registerDecl, registerDef, RuntimeError, type Registry } from "./eval";
 import { truthTable, simulate, equivalence } from "./experiments";
 import { toMermaid } from "./diagram";
@@ -11,7 +11,7 @@ export interface RunResult {
   registry: Registry;
 }
 
-function loadStatements(reg: Registry, src: string, log: string[]): number {
+function loadStatements(reg: Registry, aliases: TypeAliases, src: string, log: string[]): number {
   let chunks: string[];
   let errorCount = 0;
   try {
@@ -26,7 +26,7 @@ function loadStatements(reg: Registry, src: string, log: string[]): number {
 
   for (const chunk of chunks) {
     try {
-      const stmt = parseChunk(chunk);
+      const stmt = parseChunk(chunk, aliases);
       switch (stmt.k) {
         case "decl":
           registerDecl(reg, stmt);
@@ -50,6 +50,9 @@ function loadStatements(reg: Registry, src: string, log: string[]): number {
         case "skip":
           log.push(`(skipped unsupported \`${stmt.reason}\` command)`);
           break;
+        case "typeDef":
+          log.push(`Type \`<${stmt.name}>\` is defined.`);
+          break;
       }
     } catch (e) {
       if (e instanceof RuntimeError || e instanceof ParseError) {
@@ -65,9 +68,10 @@ function loadStatements(reg: Registry, src: string, log: string[]): number {
 
 export function run(userSource: string): RunResult {
   const reg = newRegistry();
+  const aliases: TypeAliases = new Map();
   const preludeLog: string[] = [];
-  loadStatements(reg, PRELUDE, preludeLog); // discarded: prelude is not user output
+  loadStatements(reg, aliases, PRELUDE, preludeLog); // discarded: prelude is not user output
   const log: string[] = [];
-  const errorCount = loadStatements(reg, userSource, log);
+  const errorCount = loadStatements(reg, aliases, userSource, log);
   return { log, errorCount, registry: reg };
 }

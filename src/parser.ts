@@ -1,8 +1,13 @@
-import { lex, isBitTok, type Tok } from "./lexer";
+import { lex, type Tok } from "./lexer";
 import {
   type Ty, BIT, cable, type Pat, type Expr, type Eqn,
-  type Decl, type Def, type Stmt, type ValueLit, indexDef,
+  type Decl, type Def, type Stmt, type ValueLit, type TypeDef, indexDef,
 } from "./ast";
+
+// Names introduced by `type <Name> = <type-expr>` statements, resolved
+// during parsing. Shared across a whole program (and the prelude) so a
+// user's `type` statement is visible to every later declaration.
+export type TypeAliases = Map<string, Ty>;
 
 export class ParseError extends Error {}
 
@@ -75,6 +80,7 @@ function topLevelSymbol(text: string, sym: string): number {
 class TokStream {
   constructor(private toks: Tok[], private pos = 0) {}
   peek(): Tok { return this.toks[this.pos]!; }
+  peekAt(offset: number): Tok { return this.toks[this.pos + offset]!; }
   next(): Tok { return this.toks[this.pos++]!; }
   at(kind: Tok["kind"]): boolean { return this.peek().kind === kind; }
   expect(kind: Tok["kind"]): Tok {
@@ -86,14 +92,26 @@ class TokStream {
   }
 }
 
-function parseType(ts: TokStream): Ty {
-  if (isBitTok(ts.peek())) { ts.next(); return BIT; }
+function parseType(ts: TokStream, aliases: TypeAliases): Ty {
+  if (ts.at("at")) {
+    // `@Ty` marks an output as coming from a register/feedback loop; it
+    // carries no structural meaning here, so just parse past it.
+    ts.next();
+    return parseType(ts, aliases);
+  }
+  if (ts.at("tyname")) {
+    const t = ts.next();
+    if (t.value === "Bit") return BIT;
+    const alias = aliases.get(t.value);
+    if (!alias) throw new ParseError(`undefined type <${t.value}>`);
+    return alias;
+  }
   if (ts.at("lbrack")) {
     ts.next();
     const items: Ty[] = [];
     if (!ts.at("rbrack")) {
-      items.push(parseType(ts));
-      while (ts.at("comma")) { ts.next(); items.push(parseType(ts)); }
+      items.push(parseType(ts, aliases));
+      while (ts.at("comma")) { ts.next(); items.push(parseType(ts, aliases)); }
     }
     ts.expect("rbrack");
     return cable(items);
@@ -101,34 +119,34 @@ function parseType(ts: TokStream): Ty {
   throw new ParseError(`expected a type at token '${ts.peek().value}'`);
 }
 
-function parseTypeListUntil(ts: TokStream, stop: () => boolean): Ty[] {
+function parseTypeListUntil(ts: TokStream, aliases: TypeAliases, stop: () => boolean): Ty[] {
   const items: Ty[] = [];
   if (stop()) return items;
-  items.push(parseType(ts));
-  while (ts.at("comma")) { ts.next(); items.push(parseType(ts)); }
+  items.push(parseType(ts, aliases));
+  while (ts.at("comma")) { ts.next(); items.push(parseType(ts, aliases)); }
   return items;
 }
 
-function parseDecl(ts: TokStream): Decl {
+function parseDecl(ts: TokStream, aliases: TypeAliases): Decl {
   let name: string;
   let ins: Ty[];
   if (ts.at("bang")) {
     ts.next();
-    ins = [parseType(ts)];
+    ins = [parseType(ts, aliases)];
     name = "not";
-  } else if (ts.at("name") && !isBitTok(ts.peek())) {
+  } else if (ts.at("name")) {
     name = ts.next().value;
     ts.expect("lparen");
-    ins = parseTypeListUntil(ts, () => ts.at("rparen"));
+    ins = parseTypeListUntil(ts, aliases, () => ts.at("rparen"));
     ts.expect("rparen");
   } else {
-    const ty1 = parseType(ts);
-    if (ts.at("amp")) { ts.next(); ins = [ty1, parseType(ts)]; name = "and"; }
-    else if (ts.at("pipe")) { ts.next(); ins = [ty1, parseType(ts)]; name = "or"; }
+    const ty1 = parseType(ts, aliases);
+    if (ts.at("amp")) { ts.next(); ins = [ty1, parseType(ts, aliases)]; name = "and"; }
+    else if (ts.at("pipe")) { ts.next(); ins = [ty1, parseType(ts, aliases)]; name = "or"; }
     else throw new ParseError(`malformed declaration near '${ts.peek().value}'`);
   }
   ts.expect("arrow");
-  const outs = parseTypeListUntil(ts, () => ts.at("eof"));
+  const outs = parseTypeListUntil(ts, aliases, () => ts.at("eof"));
   ts.expect("eof");
   return { k: "decl", name, ins, outs };
 }
@@ -203,7 +221,7 @@ function parseExprUnary(ts: TokStream): Expr {
 function parseExprAtom(ts: TokStream): Expr {
   const t = ts.peek();
   if (t.kind === "num") { ts.next(); return { k: "lit", bit: (t.value === "1" ? 1 : 0) }; }
-  if (t.kind === "name" && !isBitTok(t)) {
+  if (t.kind === "name") {
     ts.next();
     if (ts.at("lparen")) {
       ts.next();
@@ -248,10 +266,23 @@ function parseDefStatement(chunk: string): Def {
   const bodyText = whereIdx === -1 ? "" : chunk.slice(whereIdx + "where".length);
 
   const ts = new TokStream(lex(headText));
-  const name = ts.expect("name").value;
-  ts.expect("lparen");
-  const params = parsePatListUntil(ts, () => ts.at("rparen"));
-  ts.expect("rparen");
+  let name: string;
+  let params: Pat[];
+  if (ts.at("bang")) {
+    ts.next();
+    name = "not";
+    params = [parsePat(ts)];
+  } else if (ts.at("name") && ts.peekAt(1).kind === "lparen") {
+    name = ts.next().value;
+    ts.expect("lparen");
+    params = parsePatListUntil(ts, () => ts.at("rparen"));
+    ts.expect("rparen");
+  } else {
+    const left = parsePat(ts);
+    if (ts.at("amp")) { ts.next(); name = "and"; params = [left, parsePat(ts)]; }
+    else if (ts.at("pipe")) { ts.next(); name = "or"; params = [left, parsePat(ts)]; }
+    else throw new ParseError(`malformed definition near '${ts.peek().value}'`);
+  }
   checkDistinctPatternNames(params);
   ts.expect("eq");
   const rhs = parseExprListUntil(ts, () => ts.at("eof"));
@@ -339,7 +370,21 @@ function parseDisplay(chunk: string): Stmt {
   return { k: "display", name: rest };
 }
 
-export function parseChunk(chunk: string): Stmt {
+function parseTypeDef(chunk: string, aliases: TypeAliases): TypeDef {
+  const rest = chunk.slice(chunk.indexOf("type") + "type".length).trim();
+  const ts = new TokStream(lex(rest));
+  const nameTok = ts.expect("tyname");
+  if (nameTok.value === "Bit" || aliases.has(nameTok.value)) {
+    throw new ParseError(`type <${nameTok.value}> is already defined`);
+  }
+  ts.expect("eq");
+  const ty = parseType(ts, aliases);
+  ts.expect("eof");
+  aliases.set(nameTok.value, ty);
+  return { k: "typeDef", name: nameTok.value, ty };
+}
+
+export function parseChunk(chunk: string, aliases: TypeAliases = new Map()): Stmt {
   const head = chunk.trimStart();
   if (head.startsWith("experiment")) {
     return parseExperiment(chunk);
@@ -347,7 +392,10 @@ export function parseChunk(chunk: string): Stmt {
   if (/^display\b/.test(head)) {
     return parseDisplay(chunk);
   }
-  if (/^(type|print)\b/.test(head)) {
+  if (/^type\b/.test(head)) {
+    return parseTypeDef(chunk, aliases);
+  }
+  if (/^print\b/.test(head)) {
     return { k: "skip", reason: head.split(/\s/)[0]! };
   }
   const arrowIdx = topLevelSymbol(chunk, "->");
@@ -364,7 +412,7 @@ export function parseChunk(chunk: string): Stmt {
   const isDecl = arrowIdx !== -1 && (eqIdx === -1 || arrowIdx < eqIdx);
   if (isDecl) {
     const ts = new TokStream(lex(chunk));
-    return parseDecl(ts);
+    return parseDecl(ts, aliases);
   } else if (eqIdx !== -1) {
     return parseDefStatement(chunk);
   } else {
@@ -376,5 +424,6 @@ export function parseChunk(chunk: string): Stmt {
 // the entire parse. Prefer driving splitStatements()+parseChunk() one
 // statement at a time (see run.ts) when partial progress on error matters.
 export function parseProgram(src: string): Stmt[] {
-  return splitStatements(src).map(parseChunk);
+  const aliases: TypeAliases = new Map();
+  return splitStatements(src).map((chunk) => parseChunk(chunk, aliases));
 }
