@@ -70,7 +70,12 @@ export interface Skip {
   reason: string;
 }
 
-export type Stmt = Decl | Def | ExpTruth | ExpEquiv | ExpSim | Skip;
+export interface Display {
+  k: "display";
+  name: string;
+}
+
+export type Stmt = Decl | Def | ExpTruth | ExpEquiv | ExpSim | Display | Skip;
 
 // Assigns a per-definition-local index to every `app` node, in a fixed
 // deterministic (pre-order) traversal. This index, combined with the

@@ -1,6 +1,7 @@
 import { splitStatements, parseChunk, ParseError } from "./parser";
 import { newRegistry, registerDecl, registerDef, RuntimeError, type Registry } from "./eval";
 import { truthTable, simulate, equivalence } from "./experiments";
+import { toMermaid } from "./diagram";
 import { PRELUDE } from "./prelude";
 import type { Value } from "./values";
 
@@ -42,6 +43,9 @@ function loadStatements(reg: Registry, src: string, log: string[]): number {
           break;
         case "expSim":
           log.push(simulate(reg, stmt.name, stmt.steps as Value[][]));
+          break;
+        case "display":
+          log.push("```mermaid\n" + toMermaid(reg, stmt.name) + "\n```");
           break;
         case "skip":
           log.push(`(skipped unsupported \`${stmt.reason}\` command)`);

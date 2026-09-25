@@ -3,6 +3,7 @@
 export { run, type RunResult } from "./run";
 export { newRegistry, type Registry, type Component, RuntimeError } from "./eval";
 export { truthTable, simulate, equivalence } from "./experiments";
+export { toMermaid } from "./diagram";
 export type { Bit, Value } from "./values";
 export type { Ty, Decl, Def } from "./ast";
 export { ParseError } from "./parser";

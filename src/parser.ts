@@ -332,12 +332,22 @@ function parseExperiment(chunk: string): Stmt {
   throw new ParseError(`malformed experiment: "${chunk}"`);
 }
 
+function parseDisplay(chunk: string): Stmt {
+  const rest = chunk.slice(chunk.indexOf("display") + "display".length).trim();
+  const m = /^[A-Za-z][A-Za-z0-9]*$/.exec(rest);
+  if (!m) throw new ParseError(`malformed display: "${chunk}"`);
+  return { k: "display", name: rest };
+}
+
 export function parseChunk(chunk: string): Stmt {
   const head = chunk.trimStart();
   if (head.startsWith("experiment")) {
     return parseExperiment(chunk);
   }
-  if (/^(type|display|print)\b/.test(head)) {
+  if (/^display\b/.test(head)) {
+    return parseDisplay(chunk);
+  }
+  if (/^(type|print)\b/.test(head)) {
     return { k: "skip", reason: head.split(/\s/)[0]! };
   }
   const arrowIdx = topLevelSymbol(chunk, "->");
