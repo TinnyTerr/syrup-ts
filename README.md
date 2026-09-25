@@ -31,6 +31,22 @@ bun run index.ts path/to/circuit.syrup
 bun test
 ```
 
+## Building
+
+```bash
+bun run build
+```
+
+Produces `dist/`:
+
+- `dist/index.js` + `dist/index.d.ts` — the library (`run`, `newRegistry`,
+  `truthTable`/`simulate`/`equivalence`, AST/value types), bundled for
+  `--target browser` so it has no Bun- or Node-specific APIs and can be
+  imported from a webpage, bundler, or any JS runtime.
+- `dist/cli.js` — the CLI (`index.ts`), a standalone executable script for
+  Bun (`./dist/cli.js path/to/circuit.syrup`, or invoke via the `syrup` bin
+  once installed).
+
 ## Layout
 
 - `src/lexer.ts`, `src/parser.ts` — tokenizer and recursive-descent parser
@@ -43,4 +59,5 @@ bun test
 - `src/prelude.ts` — `not`/`and`/`or`/`xor`/`one`, defined in Syrup itself
 - `src/run.ts` — ties parsing + registration + experiments together, one
   statement at a time so a later syntax error doesn't lose earlier results
+- `src/index.ts` — the library's public entry point (barrel export)
 - `index.ts` — CLI entry point
