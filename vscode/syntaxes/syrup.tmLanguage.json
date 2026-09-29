@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Syrup",
+  "scopeName": "source.syrup",
+  "patterns": [
+    {
+      "name": "comment.line.double-dash.syrup",
+      "match": "--.*"
+    },
+    {
+      "name": "storage.type.syrup",
+      "match": "<[A-Za-z][A-Za-z0-9]*>"
+    },
+    {
+      "name": "keyword.control.syrup",
+      "match": "\\b(?:experiment|where|display|type|print)\\b"
+    },
+    {
+      "name": "support.function.builtin.syrup",
+      "match": "\\b(?:nand|zero|dff|srff|not|and|or|xor|one)\\b"
+    },
+    {
+      "name": "entity.name.function.syrup",
+      "match": "\\b[A-Za-z][A-Za-z0-9]*(?=\\()"
+    },
+    {
+      "name": "constant.numeric.syrup",
+      "match": "\\b[0-9]+\\b"
+    },
+    {
+      "name": "keyword.operator.syrup",
+      "match": "->|[=!&|@]"
+    },
+    {
+      "name": "punctuation.syrup",
+      "match": "[()\\[\\],]"
+    }
+  ]
+}
