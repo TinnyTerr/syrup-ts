@@ -1,32 +1,41 @@
 {
-  "name": "syrup-vscode",
-  "displayName": "Syrup",
-  "description": "Syntax highlighting for the Syrup circuit language",
-  "version": "0.1.0",
-  "publisher": "tinnyterr",
-  "private": true,
-  "license": "UNLICENSED",
-  "engines": { "vscode": "^1.80.0" },
-  "categories": ["Programming Languages"],
-  "scripts": {
-    "gen": "bun ../shared/gen-textmate.ts",
-    "package": "bun run gen && bunx @vscode/vsce package --no-dependencies"
-  },
-  "contributes": {
-    "languages": [
-      {
-        "id": "syrup",
-        "aliases": ["Syrup", "syrup"],
-        "extensions": [".syrup"],
-        "configuration": "./language-configuration.json"
-      }
+    "name": "syrup-vscode",
+    "displayName": "Syrup",
+    "description": "Syntax highlighting for the Syrup circuit language",
+    "version": "0.1.0",
+    "publisher": "tinnyterr",
+    "private": true,
+    "license": "GPL-3.0-only",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Programming Languages"
     ],
-    "grammars": [
-      {
-        "language": "syrup",
-        "scopeName": "source.syrup",
-        "path": "./syntaxes/syrup.tmLanguage.json"
-      }
-    ]
-  }
+    "scripts": {
+        "gen": "bun ../shared/gen-textmate.ts",
+        "package": "bun run gen && bunx @vscode/vsce package --no-dependencies"
+    },
+    "contributes": {
+        "languages": [
+            {
+                "id": "syrup",
+                "aliases": [
+                    "Syrup",
+                    "syrup"
+                ],
+                "extensions": [
+                    ".syrup"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "syrup",
+                "scopeName": "source.syrup",
+                "path": "./syntaxes/syrup.tmLanguage.json"
+            }
+        ]
+    }
 }
