@@ -1,0 +1,110 @@
+name: build
+
+# Manual only: Actions tab -> build -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a GitHub release with this tag (e.g. v0.2.0). Blank = artifacts only."
+        required: false
+        default: ""
+      publish_npm:
+        description: "Also npm publish (needs NPM_TOKEN secret and \"private\" removed from package.json)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+
+  library:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bun run build:web
+      - run: bun pm pack --destination out
+      - uses: actions/upload-artifact@v4
+        with: { name: npm-package, path: out/*.tgz }
+      - uses: actions/upload-artifact@v4
+        with: { name: web-assets, path: dist/web/ }
+      - if: inputs.publish_npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  executables:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Cross-compile
+        run: |
+          for t in linux-x64 linux-arm64 darwin-x64 darwin-arm64 windows-x64; do
+            ext=""; [ "$t" = windows-x64 ] && ext=".exe"
+            bun build ./index.ts --compile --minify --target=bun-$t --outfile out/syrup-$t$ext
+          done
+          cd out && sha256sum syrup-* > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with: { name: executables, path: out/ }
+
+  editors:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Obsidian plugin
+        working-directory: obsidian
+        run: |
+          bun install
+          bun run build
+          mkdir -p ../out/obsidian
+          cp manifest.json main.js styles.css ../out/obsidian/
+      - name: VS Code extension
+        working-directory: vscode
+        run: |
+          bun run package
+          mkdir -p ../out/vscode
+          cp *.vsix ../out/vscode/
+      - uses: actions/upload-artifact@v4
+        with: { name: obsidian-plugin, path: out/obsidian/ }
+      - uses: actions/upload-artifact@v4
+        with: { name: vscode-extension, path: out/vscode/ }
+
+  release:
+    if: inputs.release_tag != ''
+    needs: [library, executables, editors]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - name: Stage release files
+        run: |
+          mkdir rel
+          cp artifacts/executables/* rel/
+          cp artifacts/npm-package/*.tgz rel/
+          cp artifacts/vscode-extension/*.vsix rel/
+          # Obsidian's release format wants these three as loose assets
+          cp artifacts/obsidian-plugin/{manifest.json,main.js,styles.css} rel/
+          (cd artifacts/web-assets && zip -r ../../rel/syrup-web.zip .)
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          generate_release_notes: true
+          files: rel/*

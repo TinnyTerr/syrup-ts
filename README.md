@@ -47,6 +47,18 @@ Produces `dist/`:
   Bun (`./dist/cli.js path/to/circuit.syrup`, or invoke via the `syrup` bin
   once installed).
 
+## Release workflow
+
+`.github/workflows/build.yml` runs on request only (Actions tab -> build -> Run
+workflow). It tests, then builds in parallel: the npm tarball, web assets
+(`dist/web/syrup.js` global `Syrup` IIFE + `syrup.esm.js`), executables for
+linux/mac/windows (x64 + arm64 where Bun supports it, with `SHA256SUMS`), the
+Obsidian plugin files and the `.vsix`. Give it a `release_tag` to also cut a
+GitHub release with everything attached. `publish_npm` needs an `NPM_TOKEN`
+secret and `"private"` removed from `package.json`.
+
+Locally: `bun run build:web`, `bun run build:exe`, `bun run build:editors`.
+
 ## Layout
 
 - `src/lexer.ts`, `src/parser.ts` — tokenizer and recursive-descent parser
