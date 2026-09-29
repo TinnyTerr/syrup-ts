@@ -1,0 +1,11 @@
+.syrup-source { margin-bottom: 0.5em; }
+.syrup-output { border-left: 3px solid var(--background-modifier-border); padding-left: 0.75em; }
+.syrup-entry { margin: 0.4em 0; white-space: pre-wrap; }
+.syrup-error { color: var(--text-error); }
+.syrup-source .token.comment { color: var(--text-faint); font-style: italic; }
+.syrup-source .token.keyword { color: var(--color-purple); }
+.syrup-source .token.builtin { color: var(--color-cyan); }
+.syrup-source .token.function { color: var(--color-blue); }
+.syrup-source .token.type { color: var(--color-orange); }
+.syrup-source .token.number { color: var(--color-green); }
+.syrup-source .token.operator { color: var(--color-red); }

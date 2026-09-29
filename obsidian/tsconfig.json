@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "types": [], "lib": ["ESNext", "DOM"] },
+  "include": ["main.ts", "highlight.ts", "../src/index.ts", "../shared/tokens.ts"]
+}

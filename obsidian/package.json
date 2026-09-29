@@ -1,0 +1,14 @@
+{
+  "name": "syrup-obsidian",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build main.ts --outfile main.js --target node --format cjs -e obsidian -e electron",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "obsidian": "latest",
+    "typescript": "^7"
+  }
+}
