@@ -1,4 +1,4 @@
-import { lex, type Tok } from "./lexer";
+import { lex, LexError, type Tok } from "./lexer";
 import {
   type Ty, BIT, cable, type Pat, type Expr, type Eqn,
   type Decl, type Def, type Stmt, type ValueLit, type TypeDef, indexDef,
@@ -9,7 +9,31 @@ import {
 // user's `type` statement is visible to every later declaration.
 export type TypeAliases = Map<string, Ty>;
 
-export class ParseError extends Error {}
+/** The two graphical output types built into the language. */
+export function builtinAliases(): TypeAliases {
+  const bits = (n: number) => cable(Array.from({ length: n }, () => BIT));
+  return new Map<string, Ty>([
+    ["7Segments", { ...bits(7), alias: "7Segments" }],
+    ["Braille", { ...bits(6), alias: "Braille" }],
+  ]);
+}
+
+// How a parse failure is explained in the "I was trying to make sense of" report.
+export type Because =
+  | { k: "unexpected" } // it made sense, but then stuff I didn't expect
+  | { k: "begin" } // didn't know where to begin
+  | { k: "hoping"; hoping: string; found: string };
+
+export class ParseError extends Error {
+  constructor(
+    message: string,
+    public pos?: number,
+    public looking?: string,
+    public because?: Because,
+  ) {
+    super(message);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Statement splitting: Syrup uses an offside rule where a statement starts
@@ -22,29 +46,30 @@ function stripComment(line: string): string {
 }
 
 export function splitStatements(src: string): string[] {
-  const rawLines = src.split("\n");
   const chunks: string[] = [];
   let cur: string[] = [];
-  for (const raw of rawLines) {
-    const stripped = stripComment(raw);
-    if (stripped.trim() === "") continue;
-    const isIndented = /^[ \t]/.test(stripped);
-    if (!isIndented) {
+  let blanks = 0;
+  for (const raw of src.split("\n")) {
+    const stripped = stripComment(raw).replace(/\s+$/, "");
+    if (stripped.trim() === "") {
+      blanks++;
+      continue;
+    }
+    if (!/^[ \t]/.test(stripped)) {
       if (cur.length) chunks.push(cur.join("\n"));
       cur = [stripped];
     } else {
-      if (cur.length === 0) {
-        throw new ParseError(`unexpected indentation: "${raw}"`);
-      }
+      if (cur.length === 0) throw new ParseError(`unexpected indentation: "${raw}"`);
+      for (; blanks > 0; blanks--) cur.push("");
       cur.push(stripped);
     }
+    blanks = 0;
   }
   if (cur.length) chunks.push(cur.join("\n"));
   return chunks;
 }
 
-// Find the index (in raw text) of a standalone top-level word (e.g. "where"),
-// tracking bracket depth so nested structure can't shadow it. -1 if absent.
+// Index of a standalone top-level word (e.g. "where"), tracking bracket depth.
 function topLevelWord(text: string, word: string): number {
   let depth = 0;
   for (let i = 0; i < text.length; i++) {
@@ -60,8 +85,6 @@ function topLevelWord(text: string, word: string): number {
   return -1;
 }
 
-// Find the index of a top-level occurrence of a punctuation substring (e.g.
-// "->"), tracking bracket depth.
 function topLevelSymbol(text: string, sym: string): number {
   let depth = 0;
   for (let i = 0; i < text.length; i++) {
@@ -77,17 +100,25 @@ function topLevelSymbol(text: string, sym: string): number {
 // Token-stream parser
 // ---------------------------------------------------------------------------
 
+function describe(t: Tok): string {
+  return t.kind === "eof" ? "the end" : t.value;
+}
+
 class TokStream {
   constructor(private toks: Tok[], private pos = 0) {}
   peek(): Tok { return this.toks[this.pos]!; }
-  peekAt(offset: number): Tok { return this.toks[this.pos + offset]!; }
+  peekAt(offset: number): Tok { return this.toks[Math.min(this.pos + offset, this.toks.length - 1)]!; }
   next(): Tok { return this.toks[this.pos++]!; }
   at(kind: Tok["kind"]): boolean { return this.peek().kind === kind; }
-  expect(kind: Tok["kind"]): Tok {
-    const t = this.next();
+  expect(kind: Tok["kind"], looking?: string): Tok {
+    const t = this.peek();
     if (t.kind !== kind) {
-      throw new ParseError(`expected ${kind} but got ${t.kind} '${t.value}' at ${t.pos}`);
+      throw new ParseError(
+        `expected ${kind} but got ${t.kind} '${t.value}' at ${t.pos}`,
+        t.pos, looking, { k: "unexpected" },
+      );
     }
+    this.pos++;
     return t;
   }
 }
@@ -97,13 +128,13 @@ function parseType(ts: TokStream, aliases: TypeAliases): Ty {
     // `@Ty` marks an output as coming from a register/feedback loop; it
     // carries no structural meaning here, so just parse past it.
     ts.next();
-    return parseType(ts, aliases);
+    return { ...parseType(ts, aliases), mem: true };
   }
   if (ts.at("tyname")) {
     const t = ts.next();
     if (t.value === "Bit") return BIT;
     const alias = aliases.get(t.value);
-    if (!alias) throw new ParseError(`undefined type <${t.value}>`);
+    if (!alias) throw new ParseError(`undefined type <${t.value}>`, t.pos);
     return alias;
   }
   if (ts.at("lbrack")) {
@@ -116,7 +147,7 @@ function parseType(ts: TokStream, aliases: TypeAliases): Ty {
     ts.expect("rbrack");
     return cable(items);
   }
-  throw new ParseError(`expected a type at token '${ts.peek().value}'`);
+  throw new ParseError(`expected a type at token '${ts.peek().value}'`, ts.peek().pos);
 }
 
 function parseTypeListUntil(ts: TokStream, aliases: TypeAliases, stop: () => boolean): Ty[] {
@@ -127,6 +158,9 @@ function parseTypeListUntil(ts: TokStream, aliases: TypeAliases, stop: () => boo
   return items;
 }
 
+// Circuits named by a numeral: `1 -> <Bit>` declares `one`, `0` declares `zero`.
+const NUMERAL_NAME: Record<string, string> = { "0": "zero", "1": "one" };
+
 function parseDecl(ts: TokStream, aliases: TypeAliases): Decl {
   let name: string;
   let ins: Ty[];
@@ -134,16 +168,19 @@ function parseDecl(ts: TokStream, aliases: TypeAliases): Decl {
     ts.next();
     ins = [parseType(ts, aliases)];
     name = "not";
+  } else if (ts.at("num")) {
+    name = NUMERAL_NAME[ts.next().value]!;
+    ins = [];
   } else if (ts.at("name")) {
     name = ts.next().value;
-    ts.expect("lparen");
+    ts.expect("lparen", "a component template");
     ins = parseTypeListUntil(ts, aliases, () => ts.at("rparen"));
     ts.expect("rparen");
   } else {
     const ty1 = parseType(ts, aliases);
     if (ts.at("amp")) { ts.next(); ins = [ty1, parseType(ts, aliases)]; name = "and"; }
     else if (ts.at("pipe")) { ts.next(); ins = [ty1, parseType(ts, aliases)]; name = "or"; }
-    else throw new ParseError(`malformed declaration near '${ts.peek().value}'`);
+    else throw new ParseError(`malformed declaration near '${ts.peek().value}'`, ts.peek().pos);
   }
   ts.expect("arrow");
   const outs = parseTypeListUntil(ts, aliases, () => ts.at("eof"));
@@ -164,7 +201,7 @@ function parsePat(ts: TokStream): Pat {
     ts.expect("rbrack");
     return { k: "cable", items };
   }
-  throw new ParseError(`expected a pattern at token '${ts.peek().value}'`);
+  throw new ParseError(`expected a pattern at token '${ts.peek().value}'`, ts.peek().pos);
 }
 
 function parsePatListUntil(ts: TokStream, stop: () => boolean): Pat[] {
@@ -175,37 +212,21 @@ function parsePatListUntil(ts: TokStream, stop: () => boolean): Pat[] {
   return items;
 }
 
-function checkDistinctPatternNames(pats: Pat[]): void {
-  const seen = new Set<string>();
-  const walk = (p: Pat) => {
-    if (p.k === "var") {
-      if (seen.has(p.name)) {
-        throw new ParseError(`You are redefining the local variable ${p.name}.`);
-      }
-      seen.add(p.name);
-    } else if (p.k === "cable") {
-      p.items.forEach(walk);
-    }
-  };
-  pats.forEach(walk);
-}
-
+// `|` and `&` associate to the right: `X | Y | Z` is `X | (Y | Z)`.
 function parseExprOr(ts: TokStream): Expr {
-  let left = parseExprAnd(ts);
-  while (ts.at("pipe")) {
+  const left = parseExprAnd(ts);
+  if (ts.at("pipe")) {
     ts.next();
-    const right = parseExprAnd(ts);
-    left = { k: "app", name: "or", args: [left, right] };
+    return { k: "app", name: "or", args: [left, parseExprOr(ts)] };
   }
   return left;
 }
 
 function parseExprAnd(ts: TokStream): Expr {
-  let left = parseExprUnary(ts);
-  while (ts.at("amp")) {
+  const left = parseExprUnary(ts);
+  if (ts.at("amp")) {
     ts.next();
-    const right = parseExprUnary(ts);
-    left = { k: "app", name: "and", args: [left, right] };
+    return { k: "app", name: "and", args: [left, parseExprAnd(ts)] };
   }
   return left;
 }
@@ -221,6 +242,7 @@ function parseExprUnary(ts: TokStream): Expr {
 function parseExprAtom(ts: TokStream): Expr {
   const t = ts.peek();
   if (t.kind === "num") { ts.next(); return { k: "lit", bit: (t.value === "1" ? 1 : 0) }; }
+  if (t.kind === "hole" && t.value !== "") { ts.next(); return { k: "hole", name: t.value }; }
   if (t.kind === "name") {
     ts.next();
     if (ts.at("lparen")) {
@@ -244,7 +266,8 @@ function parseExprAtom(ts: TokStream): Expr {
     return e;
   }
   throw new ParseError(
-    `I was trying to make sense of the following code but got stuck at '${t.value || "<end>"}'. I was looking for an expression.`
+    `I was trying to make sense of the following code but got stuck at '${t.value || "<end>"}'. I was looking for an expression.`,
+    t.pos, "a definition", { k: "unexpected" },
   );
 }
 
@@ -254,6 +277,14 @@ function parseExprListUntil(ts: TokStream, stop: () => boolean): Expr[] {
   items.push(parseExprOr(ts));
   while (ts.at("comma")) { ts.next(); items.push(parseExprOr(ts)); }
   return items;
+}
+
+/** Parse a standalone expression (used by property tests). */
+export function parseExprText(text: string): Expr {
+  const ts = new TokStream(lex(text));
+  const e = parseExprOr(ts);
+  ts.expect("eof");
+  return e;
 }
 
 // ---------------------------------------------------------------------------
@@ -272,30 +303,46 @@ function parseDefStatement(chunk: string): Def {
     ts.next();
     name = "not";
     params = [parsePat(ts)];
+  } else if (ts.at("num")) {
+    name = NUMERAL_NAME[ts.next().value]!;
+    params = [];
   } else if (ts.at("name") && ts.peekAt(1).kind === "lparen") {
     name = ts.next().value;
     ts.expect("lparen");
     params = parsePatListUntil(ts, () => ts.at("rparen"));
     ts.expect("rparen");
   } else {
+    const first = ts.peek();
+    if (first.kind === "name" && ts.peekAt(1).kind !== "amp" && ts.peekAt(1).kind !== "pipe") {
+      const nxt = ts.peekAt(1);
+      throw new ParseError(
+        `malformed definition near '${nxt.value}'`,
+        nxt.pos, "a component template",
+        nxt.kind === "eof" ? { k: "begin" } : { k: "hoping", hoping: "(..)", found: describe(nxt) },
+      );
+    }
     const left = parsePat(ts);
     if (ts.at("amp")) { ts.next(); name = "and"; params = [left, parsePat(ts)]; }
     else if (ts.at("pipe")) { ts.next(); name = "or"; params = [left, parsePat(ts)]; }
-    else throw new ParseError(`malformed definition near '${ts.peek().value}'`);
+    else throw new ParseError(`malformed definition near '${ts.peek().value}'`, ts.peek().pos);
   }
-  checkDistinctPatternNames(params);
   ts.expect("eq");
   const rhs = parseExprListUntil(ts, () => ts.at("eof"));
-  ts.expect("eof");
+  if (!ts.at("eof") || rhs.length === 0) {
+    throw new ParseError(
+      `unexpected '${describe(ts.peek())}' in a definition`,
+      ts.peek().pos, "a definition", { k: "unexpected" },
+    );
+  }
 
   const eqns: Eqn[] = [];
+  let emptyWhere = false;
   if (whereIdx !== -1) {
-    for (const rawLine of bodyText.split("\n")) {
-      const line = stripComment(rawLine).trim();
-      if (line === "") continue;
+    const lines = bodyText.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+    emptyWhere = lines.length === 0;
+    for (const line of lines) {
       const ets = new TokStream(lex(line));
       const lhs = parsePatListUntil(ets, () => ets.at("eq"));
-      checkDistinctPatternNames(lhs);
       ets.expect("eq");
       const erhs = parseExprListUntil(ets, () => ets.at("eof"));
       ets.expect("eof");
@@ -303,14 +350,14 @@ function parseDefStatement(chunk: string): Def {
     }
   }
 
-  const def: Def = { k: "def", name, params, rhs, eqns };
+  const def: Def = { k: "def", name, params, rhs, eqns, src: chunk, emptyWhere };
   indexDef(def);
   return def;
 }
 
 // Parses the bracket/digit literal grammar used inside `experiment f(...)`,
 // e.g. `[[10][10]] [[01][10]] 0`.
-function parseValueLitSeq(text: string): ValueLit[] {
+export function parseValueLitSeq(text: string): ValueLit[] {
   let i = 0;
   const n = text.length;
   const skipWs = () => { while (i < n && /\s/.test(text[i]!)) i++; };
@@ -318,9 +365,11 @@ function parseValueLitSeq(text: string): ValueLit[] {
     if (text[i] === "[") {
       i++;
       const items: ValueLit[] = [];
+      skipWs();
       while (text[i] !== "]") {
         if (i >= n) throw new ParseError("unterminated cable literal");
         items.push(parseOne());
+        skipWs();
       }
       i++;
       return items;
@@ -341,33 +390,98 @@ function parseValueLitSeq(text: string): ValueLit[] {
   return out;
 }
 
+function parseMem(text: string): number[] {
+  return [...text].filter((c) => c === "0" || c === "1").map(Number);
+}
+
+function matchParen(text: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === "(") depth++;
+    else if (text[i] === ")" && --depth === 0) return i;
+  }
+  return -1;
+}
+
 function parseExperiment(chunk: string): Stmt {
-  const rest = chunk.slice("experiment".length).trim();
+  const rest = chunk.trim().slice("experiment".length).trim();
+
+  const fa = /^forall\s+(.*?)\s*->\s*(.*)$/s.exec(rest);
+  if (fa) {
+    const vars = fa[1]!.split(",").map((v) => v.trim()).filter((v) => v !== "");
+    const body = fa[2]!;
+    const eq = topLevelSymbol(body, "=");
+    if (eq === -1) throw new ParseError(`malformed property test: "${chunk}"`);
+    return {
+      k: "expForall",
+      vars,
+      lhs: parseExprText(body.slice(0, eq)),
+      rhs: parseExprText(body.slice(eq + 1)),
+    };
+  }
+
   const nameMatch = /^[A-Za-z][A-Za-z0-9]*/.exec(rest);
   if (!nameMatch) throw new ParseError(`malformed experiment: "${chunk}"`);
   const name = nameMatch[0];
-  const tail = rest.slice(name.length).trim();
+  let tail = rest.slice(name.length).trim();
+  let mem: number[] | undefined;
+  const memMatch = /^\{([01\s]*)\}/.exec(tail);
+  if (memMatch) {
+    mem = parseMem(memMatch[1]!);
+    tail = tail.slice(memMatch[0].length).trim();
+  }
   if (tail === "") return { k: "expTruth", name };
-  if (tail.startsWith("=")) {
+  if (tail.startsWith("=") && !mem) {
     const other = tail.slice(1).trim();
     const m2 = /^[A-Za-z][A-Za-z0-9]*$/.exec(other);
     if (!m2) throw new ParseError(`malformed equivalence experiment: "${chunk}"`);
     return { k: "expEquiv", a: name, b: other };
   }
-  if (tail.startsWith("(") && tail.endsWith(")")) {
-    const inner = tail.slice(1, -1);
-    const stepsText = inner.split(";").map((s) => s.trim()).filter((s) => s !== "");
-    const steps = stepsText.map(parseValueLitSeq);
-    return { k: "expSim", name, steps };
+  if (tail.startsWith("(")) {
+    const close = matchParen(tail, 0);
+    if (close === -1) throw new ParseError(`malformed experiment: "${chunk}"`);
+    const inner = tail.slice(1, close);
+    const after = tail.slice(close + 1).trim();
+    if (after === "") {
+      const steps = inner
+        .split(";")
+        .map((s) => s.trim())
+        .filter((s, i, a) => s !== "" || a.length === 1)
+        .map(parseValueLitSeq);
+      return { k: "expSim", name, mem, steps };
+    }
+    if (after.startsWith("=")) {
+      let outText = after.slice(1).trim();
+      let expMem: number[] | undefined;
+      const em = /^\{([01\s]*)\}/.exec(outText);
+      if (em) {
+        expMem = parseMem(em[1]!);
+        outText = outText.slice(em[0].length).trim();
+      }
+      return {
+        k: "expUnit",
+        name,
+        mem,
+        inputs: parseValueLitSeq(inner),
+        expMem,
+        outputs: parseValueLitSeq(outText),
+        text: rest,
+      };
+    }
   }
   throw new ParseError(`malformed experiment: "${chunk}"`);
 }
 
-function parseDisplay(chunk: string): Stmt {
-  const rest = chunk.slice(chunk.indexOf("display") + "display".length).trim();
-  const m = /^[A-Za-z][A-Za-z0-9]*$/.exec(rest);
-  if (!m) throw new ParseError(`malformed display: "${chunk}"`);
-  return { k: "display", name: rest };
+function parseNameList(text: string): string[] {
+  return text.split(",").map((s) => s.trim()).filter((s) => s !== "");
+}
+
+// `display f`, `display [g, h] f` (also `cost`): names to unfold, then the circuit.
+function parseUnfolding(chunk: string, kw: string): { name: string; unfold: string[] } {
+  const rest = chunk.trim().slice(kw.length).trim();
+  const m = /^(?:\[([^\]]*)\]\s*)?([A-Za-z][A-Za-z0-9]*)$/.exec(rest);
+  if (!m) throw new ParseError(`malformed ${kw}: "${chunk}"`);
+  return { name: m[2]!, unfold: parseNameList(m[1] ?? "") };
 }
 
 function parseTypeDef(chunk: string, aliases: TypeAliases): TypeDef {
@@ -380,23 +494,36 @@ function parseTypeDef(chunk: string, aliases: TypeAliases): TypeDef {
   ts.expect("eq");
   const ty = parseType(ts, aliases);
   ts.expect("eof");
-  aliases.set(nameTok.value, ty);
-  return { k: "typeDef", name: nameTok.value, ty };
+  const named: Ty = { ...ty, alias: nameTok.value };
+  aliases.set(nameTok.value, named);
+  return { k: "typeDef", name: nameTok.value, ty: named };
 }
 
 export function parseChunk(chunk: string, aliases: TypeAliases = new Map()): Stmt {
+  try {
+    return parseChunkInner(chunk, aliases);
+  } catch (e) {
+    if (e instanceof LexError) throw new ParseError(e.message, e.pos, undefined, { k: "unexpected" });
+    throw e;
+  }
+}
+
+function parseChunkInner(chunk: string, aliases: TypeAliases): Stmt {
   const head = chunk.trimStart();
-  if (head.startsWith("experiment")) {
-    return parseExperiment(chunk);
+  if (/^experiment\b/.test(head)) return parseExperiment(chunk);
+  if (/^display\b/.test(head)) return { k: "display", ...parseUnfolding(chunk, "display") };
+  if (/^cost\b/.test(head)) return { k: "cost", ...parseUnfolding(chunk, "cost") };
+  if (/^type\s+</.test(head)) return parseTypeDef(chunk, aliases);
+  for (const kw of ["type", "print", "anf", "dnf", "simplify"] as const) {
+    if (new RegExp(`^${kw}\\s+[A-Za-z]`).test(head)) {
+      const name = head.slice(kw.length).trim();
+      if (!/^[A-Za-z][A-Za-z0-9]*$/.test(name)) throw new ParseError(`malformed ${kw}: "${chunk}"`);
+      return { k: kw === "type" ? "typing" : kw, name };
+    }
   }
-  if (/^display\b/.test(head)) {
-    return parseDisplay(chunk);
-  }
-  if (/^type\b/.test(head)) {
-    return parseTypeDef(chunk, aliases);
-  }
-  if (/^print\b/.test(head)) {
-    return { k: "skip", reason: head.split(/\s/)[0]! };
+  const def = /^definition\s+([A-Za-z][A-Za-z0-9]*)\s*\[([^\]]*)\]\s*\[([^\]]*)\]\s*$/.exec(head);
+  if (def) {
+    return { k: "definition", name: def[1]!, vars: parseNameList(def[2]!), outs: parseNameList(def[3]!) };
   }
   const arrowIdx = topLevelSymbol(chunk, "->");
   const eqIdx = (() => {
@@ -411,19 +538,18 @@ export function parseChunk(chunk: string, aliases: TypeAliases = new Map()): Stm
   })();
   const isDecl = arrowIdx !== -1 && (eqIdx === -1 || arrowIdx < eqIdx);
   if (isDecl) {
-    const ts = new TokStream(lex(chunk));
-    return parseDecl(ts, aliases);
-  } else if (eqIdx !== -1) {
-    return parseDefStatement(chunk);
-  } else {
-    throw new ParseError(`unrecognized statement: "${chunk}"`);
+    const d = parseDecl(new TokStream(lex(chunk)), aliases);
+    d.src = chunk;
+    return d;
   }
+  if (eqIdx !== -1) return parseDefStatement(chunk);
+  throw new ParseError(`unrecognized statement: "${chunk}"`, 0, "Syrup source code", { k: "begin" });
 }
 
 // Parses the whole program up front; a single malformed statement aborts
 // the entire parse. Prefer driving splitStatements()+parseChunk() one
 // statement at a time (see run.ts) when partial progress on error matters.
 export function parseProgram(src: string): Stmt[] {
-  const aliases: TypeAliases = new Map();
+  const aliases = builtinAliases();
   return splitStatements(src).map((chunk) => parseChunk(chunk, aliases));
 }

@@ -1,0 +1,119 @@
+!<Bit> -> <Bit>
+!X = Z where
+  Z = nand(X, X)
+
+<Bit> & <Bit> -> <Bit>
+X & Y = Z where
+  A = nand(X, Y)
+  Z = !A
+
+<Bit> | <Bit> -> <Bit>
+X | Y = Z where
+  A, B = !X, !Y
+  Z = nand(A, B)
+
+nor(<Bit>, <Bit>) -> <Bit>
+nor(X,Y) = !(X | Y)
+
+xor(<Bit>, <Bit>) -> <Bit>
+xor(X, Y) = Z where
+  A, B = X | Y, X & Y
+  C = !B
+  Z = A & C
+
+xor1(<Bit>, <Bit>) -> <Bit>
+xor1(X,Y) = !X & Y | X & !Y
+
+xor2(<Bit>, <Bit>) -> <Bit>
+xor2(X,Y) = (X | Y) & !(X & Y)
+
+hadd(<Bit>, <Bit>) -> <Bit>, <Bit>
+hadd(X1, Y1) = C2, S1 where
+  C2 = X1 & Y1
+  S1 = xor(X1, Y1)
+
+fadd(<Bit>, <Bit>, <Bit>) -> <Bit>, <Bit>
+fadd(X1, Y1, C1) = C2, Z1 where
+  D2, D1 = hadd(X1, Y1)
+  E2, Z1 = hadd(D1, C1)
+  _, C2 = hadd(D2, E2)
+
+jkff(<Bit>, <Bit>) -> @<Bit>
+jkff(J, K) = Q where
+  Q = dff(D)
+  D = J & !Q | !K & Q
+
+adc2([<Bit>,<Bit>],[<Bit>,<Bit>],<Bit>) ->
+  <Bit>,[<Bit>,<Bit>]
+adc2([X2,X1],[Y2,Y1],C1) = C4,[Z2,Z1] where
+  C2,Z1 = fadd(X1,Y1,C1)
+  C4,Z2 = fadd(X2,Y2,C2)
+
+type <Two> = [<Bit>,<Bit>]
+
+adcTwo(<Two>,<Two>,<Bit>) -> <Bit>,<Two>
+adcTwo(X,Y,C) = adc2(X,Y,C)
+
+
+ndnff(<Bit>) -> @<Bit>
+ndnff(D) = !Q where Q = dff(!D)
+
+tff(<Bit>) -> @<Bit>
+tff(T) = Q where Q = dff(xor(T,Q))
+
+jkt(<Bit>) -> @<Bit>
+jkt(T) = jkff(T,T)
+
+one() -> @<Bit>
+one() = !zero()
+
+guff(<Bit>) -> @<Bit>
+guff(T) = xor(Q2,Q1) where
+  Q2 = tff(!T | Q1)
+  Q1 = tff(one())
+
+tff2(<Bit>) -> @<Bit>
+tff2(T) = xor(Q2,Q1) where
+  Q2 = tff(!T | !xor(Q2,Q1))
+  Q1 = tff(!T | xor(Q2,Q1))
+
+experiment not
+experiment and
+experiment or
+experiment xor
+experiment hadd
+experiment hadd(00;01;10;11)
+experiment fadd
+experiment adc2
+experiment jkff
+experiment jkff{0}(10;00;01;00;11;00;11;00;10;01;00;10;00)
+experiment dff = ndnff
+experiment dff = tff
+experiment dff{0}(1;0;0)
+experiment tff{0}(1;0;0)
+experiment tff = jkt
+experiment nand = nor
+experiment nand = nand
+experiment xor1 = xor2
+experiment xor = or
+experiment one
+experiment tff2
+experiment tff = guff
+experiment tff{0}(0;1;0)
+experiment guff{00}(0;1;0)
+experiment tff = tff2
+
+
+type <Four> = [<Two>,<Two>]
+
+adc4(<Four>,<Four>,<Bit>) -> <Bit>,<Four>
+adc4([X32,X10],[Y32,Y10],CI) = CO,[Z32,Z10] where
+  C2,Z10 = adc2(X10,Y10,CI)
+  CO,Z32 = adc2(X32,Y32,C2)
+
+experiment adc4
+
+--display fadd
+--display [hadd] fadd
+--display adc2
+--display adc4

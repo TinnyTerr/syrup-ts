@@ -10,6 +10,7 @@ export interface Component {
   name: string;
   ins: Ty[];
   outs: Ty[];
+  prelude?: boolean; // defined by the built-in prelude: users may redefine it silently
   def?: Def; // absent => stub / primitive
   isPrimitive?: boolean;
   hasMemory?: boolean; // filled in lazily by analyseMemory
@@ -146,6 +147,7 @@ function evalExprSlots(e: Expr, frame: Frame, path: string, ctx: Ctx): Value[] {
     case "lit": return [e.bit];
     case "cable": return [evalExprList(e.items, frame, path, ctx)];
     case "app": return evalApp(e, frame, path, ctx);
+    case "hole": throw new RuntimeError(`hole ?${e.name ?? ""} has no value`);
   }
 }
 

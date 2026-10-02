@@ -83,6 +83,7 @@ function buildGraph(reg: Registry, name: string): Graph {
       case "lit": return [[{ k: "lit", bit: e.bit }]];
       case "cable": return [slotListOf(e.items).flat()];
       case "app": return appSlots(e);
+      case "hole": throw new RuntimeError("holes cannot be displayed");
     }
   }
   function slotListOf(exprs: Expr[]): Ref[] {

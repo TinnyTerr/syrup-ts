@@ -1,0 +1,13 @@
+Warning: I don't have an implementation for `nand`.
+
+Circuit `not` is defined.
+
+Error: I was trying to make sense of the following code:
+  f(<Bit>) -> <Bit>
+  f(X) = Z
+  
+Error: You tried to use Z but it is not in scope.
+
+Warning: Circuit `f` has been stubbed out.
+
+Warning: I don't have an implementation for `f`.

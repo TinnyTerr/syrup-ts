@@ -7,7 +7,7 @@ export type TokKind =
   | "name" | "num" | "wild" | "tyname"
   | "arrow" | "lparen" | "rparen" | "lbrack" | "rbrack"
   | "comma" | "eq" | "bang" | "amp" | "pipe" | "at"
-  | "where" | "experiment" | "eof";
+  | "where" | "experiment" | "hole" | "eof";
 
 export interface Tok {
   kind: TokKind;
@@ -20,7 +20,11 @@ const KEYWORDS: Record<string, TokKind> = {
   experiment: "experiment",
 };
 
-export class LexError extends Error {}
+export class LexError extends Error {
+  constructor(message: string, public pos = 0) {
+    super(message);
+  }
+}
 
 export function lex(src: string): Tok[] {
   const toks: Tok[] = [];
@@ -51,15 +55,21 @@ export function lex(src: string): Tok[] {
       while (i < n && /[0-9]/.test(src[i]!)) i++;
       const word = src.slice(start, i);
       if (word !== "0" && word !== "1") {
-        throw new LexError(`invalid numeral '${word}' at ${start}`);
+        throw new LexError(`invalid numeral '${word}' at ${start}`, start);
       }
       toks.push({ kind: "num", value: word, pos: start });
+      continue;
+    }
+    if (c === "?") {
+      i++;
+      while (i < n && /[A-Za-z0-9]/.test(src[i]!)) i++;
+      toks.push({ kind: "hole", value: src.slice(start + 1, i), pos: start });
       continue;
     }
     if (c === "<") {
       // A type name, e.g. <Bit> or <Bit2>; the token's value is the bare
       // name (no angle brackets) so the parser can look it up as an alias.
-      const m = /^<([A-Za-z][A-Za-z0-9]*)>/.exec(src.slice(i));
+      const m = /^<([A-Za-z0-9][A-Za-z0-9]*)>/.exec(src.slice(i));
       if (!m) throw new LexError(`expected a type name like <Bit> at ${i}`);
       i += m[0].length;
       toks.push({ kind: "tyname", value: m[1]!, pos: start });
@@ -80,7 +90,7 @@ export function lex(src: string): Tok[] {
       toks.push({ kind: singleKind, value: c, pos: start });
       continue;
     }
-    throw new LexError(`unexpected character '${c}' at ${i}`);
+    throw new LexError(`unexpected character '${c}' at ${i}`, i);
   }
   toks.push({ kind: "eof", value: "", pos: n });
   return toks;
