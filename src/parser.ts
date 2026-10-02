@@ -46,8 +46,14 @@ function stripComment(line: string): string {
 }
 
 export function splitStatements(src: string): string[] {
-  const chunks: string[] = [];
+  return splitStatementsDetailed(src).map((c) => c.text);
+}
+
+/** Like splitStatements, noting whether a blank line came before each chunk. */
+export function splitStatementsDetailed(src: string): { text: string; blankBefore: boolean }[] {
+  const chunks: { text: string; blankBefore: boolean }[] = [];
   let cur: string[] = [];
+  let curBlank = false;
   let blanks = 0;
   for (const raw of src.split("\n")) {
     const stripped = stripComment(raw).replace(/\s+$/, "");
@@ -56,7 +62,8 @@ export function splitStatements(src: string): string[] {
       continue;
     }
     if (!/^[ \t]/.test(stripped)) {
-      if (cur.length) chunks.push(cur.join("\n"));
+      if (cur.length) chunks.push({ text: cur.join("\n"), blankBefore: curBlank });
+      curBlank = blanks > 0;
       cur = [stripped];
     } else {
       if (cur.length === 0) throw new ParseError(`unexpected indentation: "${raw}"`);
@@ -65,7 +72,7 @@ export function splitStatements(src: string): string[] {
     }
     blanks = 0;
   }
-  if (cur.length) chunks.push(cur.join("\n"));
+  if (cur.length) chunks.push({ text: cur.join("\n"), blankBefore: curBlank });
   return chunks;
 }
 

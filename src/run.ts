@@ -1,5 +1,5 @@
 import {
-  splitStatements, parseChunk, ParseError, builtinAliases, type TypeAliases,
+  splitStatementsDetailed, parseChunk, ParseError, builtinAliases, type TypeAliases,
 } from "./parser";
 import { newRegistry, registerDef, RuntimeError, type Registry } from "./eval";
 import { toMermaid } from "./diagram";
@@ -40,6 +40,7 @@ class Engine {
   aliases: TypeAliases = builtinAliases();
   msgs: Message[] = [];
   errorCount = 0;
+  defCount = 0;
   // declarations still waiting for their definition, in declaration order
   pending = new Map<string, Decl>();
   lastDecl: string | undefined;
@@ -87,9 +88,9 @@ class Engine {
   // -- statements ---------------------------------------------------------
 
   run(src: string): void {
-    let chunks: string[];
+    let chunks: { text: string; blankBefore: boolean }[];
     try {
-      chunks = splitStatements(src);
+      chunks = splitStatementsDetailed(src);
     } catch (e) {
       if (e instanceof ParseError) {
         this.push(err(e.message));
@@ -97,11 +98,11 @@ class Engine {
       }
       throw e;
     }
-    for (const chunk of chunks) this.item(chunk);
+    for (const c of chunks) this.item(c.text, c.blankBefore);
     this.finish();
   }
 
-  item(chunk: string): void {
+  item(chunk: string, blankBefore = false): void {
     let stmt: Stmt;
     try {
       stmt = parseChunk(chunk, this.aliases);
@@ -114,7 +115,10 @@ class Engine {
       return;
     }
     switch (stmt.k) {
-      case "decl": return this.decl(stmt);
+      case "decl":
+        // consecutive declarations are a forward-declaration block; a decl after a gap ends it
+        if (blankBefore) this.flushPending();
+        return this.decl(stmt);
       case "def": return this.def(stmt);
       case "typeDef":
         this.push({
@@ -129,6 +133,12 @@ class Engine {
   }
 
   finish(): void {
+    this.flushPending();
+  }
+
+  // declarations that never got a definition: report them, then let waiting statements run
+  flushPending(): void {
+    if (this.pending.size === 0) return;
     this.push(...this.queuedLint.splice(0));
     for (const [name] of this.pending) {
       this.push(err(seq("You haven't defined the circuit ", circ(name), " just now.")));
@@ -241,6 +251,7 @@ class Engine {
       throw e;
     }
     if (!this.user) this.reg.get(def.name)!.prelude = true;
+    else this.reg.get(def.name)!.id = 4 + this.defCount++;
     this.push({ level: "comment", doc: seq("Circuit ", circ(def.name), " is defined."), define: { kind: "circuit", name: def.name } });
     this.push(...this.queuedLint.splice(0));
   }

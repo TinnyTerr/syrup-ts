@@ -2,7 +2,7 @@
 // the same printer feeds plain text and the coloured HTML output.
 
 import type { Ty, Pat, Expr, Def, Eqn } from "./ast";
-import { type Doc, seq, fn, ty, vr, sepBy } from "./doc";
+import { type Doc, seq, fn, ty, vr, kw, indent, sepBy } from "./doc";
 
 export function tyDoc(t: Ty): Doc {
   const at: Doc = t.mem ? "@" : "";
@@ -21,6 +21,7 @@ export function declDoc(name: string, ins: Ty[], outs: Ty[]): Doc {
   if (name === "not" && ins.length === 1) head = seq(fn("!"), tyDoc(ins[0]!));
   else if (name === "and" && ins.length === 2) head = seq(tyDoc(ins[0]!), " ", fn("&"), " ", tyDoc(ins[1]!));
   else if (name === "or" && ins.length === 2) head = seq(tyDoc(ins[0]!), " ", fn("|"), " ", tyDoc(ins[1]!));
+  else if ((name === "one" || name === "zero") && ins.length === 0) head = fn(name === "one" ? "1" : "0");
   else head = seq(fn(name), "(", tyListDoc(ins), ")");
   return seq(head, " -> ", tyListDoc(outs));
 }
@@ -54,6 +55,7 @@ export function exprDoc(e: Expr, level = 0): Doc {
         const d = seq(exprDoc(e.args[0]!, 2), " ", fn("|"), " ", exprDoc(e.args[1]!, 0));
         return level >= 2 ? seq("(", d, ")") : d;
       }
+      if (e.args.length === 0 && (e.name === "zero" || e.name === "one")) return fn(e.name === "one" ? "1" : "0");
       return seq(fn(e.name), "(", sepBy(e.args.map((a) => exprDoc(a)), ", "), ")");
     }
   }
@@ -73,9 +75,10 @@ export function defLines(def: Def): Doc[] {
   if (def.name === "not" && def.params.length === 1) head = seq(fn("!"), patDoc(def.params[0]!));
   else if (def.name === "and" && def.params.length === 2) head = seq(patDoc(def.params[0]!), " ", fn("&"), " ", patDoc(def.params[1]!));
   else if (def.name === "or" && def.params.length === 2) head = seq(patDoc(def.params[0]!), " ", fn("|"), " ", patDoc(def.params[1]!));
+  else if ((def.name === "one" || def.name === "zero") && def.params.length === 0) head = fn(def.name === "one" ? "1" : "0");
   else head = seq(fn(def.name), "(", patListDoc(def.params), ")");
-  const out: Doc[] = [seq(head, " = ", exprListDoc(def.rhs), def.eqns.length ? " where" : "")];
-  for (const q of def.eqns) out.push(seq("  ", eqnDoc(q)));
+  const out: Doc[] = [seq(head, " = ", exprListDoc(def.rhs), ...(def.eqns.length ? [" ", kw("where")] : []))];
+  if (def.eqns.length) out.push(indent(sepBy(def.eqns.map(eqnDoc), "\n")));
   return out;
 }
 

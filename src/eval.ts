@@ -10,6 +10,7 @@ export interface Component {
   name: string;
   ins: Ty[];
   outs: Ty[];
+  id?: number; // definition ordinal (upstream numbers circuits from 4); names Graphviz nodes
   prelude?: boolean; // defined by the built-in prelude: users may redefine it silently
   def?: Def; // absent => stub / primitive
   isPrimitive?: boolean;

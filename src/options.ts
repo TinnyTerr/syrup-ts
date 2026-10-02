@@ -9,6 +9,8 @@ export interface Options {
   quiet: boolean;
   /** with html output, print Graphviz source for `display` instead of rendering it */
   sourceDot: boolean;
+  /** turns Graphviz source into svg for the plaintext formats (the CLI wires in `dot`); without it they print the source */
+  renderDot?: (dot: string) => string;
 }
 
 export const defaultOptions: Options = { format: "plain", quiet: false, sourceDot: false };

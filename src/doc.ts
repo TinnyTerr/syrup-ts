@@ -8,7 +8,7 @@ export type Doc =
   | string
   | { t: "seq"; c: Doc[] }
   | { t: "code"; c: Doc[] }
-  | { t: "fn" | "ty" | "var"; s: string }
+  | { t: "fn" | "ty" | "var" | "kw"; s: string }
   | { t: "br" }
   | { t: "indent"; c: Doc[] }
   | { t: "codeblock"; c: Doc[] }
@@ -20,6 +20,7 @@ export const seq = (...c: Doc[]): Doc => ({ t: "seq", c });
 export const code = (...c: Doc[]): Doc => ({ t: "code", c });
 export const fn = (s: string): Doc => ({ t: "fn", s });
 export const ty = (s: string): Doc => ({ t: "ty", s });
+export const kw = (s: string): Doc => ({ t: "kw", s });
 export const vr = (s: string): Doc => ({ t: "var", s });
 export const indent = (...c: Doc[]): Doc => ({ t: "indent", c });
 export const codeblock = (...c: Doc[]): Doc => ({ t: "codeblock", c });
@@ -174,6 +175,7 @@ export function renderText(d: Doc): string {
     case "fn":
     case "ty":
     case "var":
+    case "kw":
       return d.s;
     case "br":
       return "\n";
@@ -237,7 +239,7 @@ function tableHtml(t: Table): string {
   const padded = t.padHtml !== false;
   let s = '<div class="syrup-table"><table>';
   if (t.headers) {
-    const hs = t.headers.map((h, i) => th(h, ws[i]!, padded));
+    const hs = t.headers.map((h, i) => th(h, ws[i]!, false));
     s += "<thead><tr>" + withMid(hs, "<th><code></code></th>").join("") + "</tr></thead>";
   }
   s += "<tbody>";
@@ -274,6 +276,8 @@ export function renderHtml(d: Doc): string {
       return `<span class="syrup-type">${esc(d.s)}</span>`;
     case "var":
       return `<span class="syrup-variable">${esc(d.s)}</span>`;
+    case "kw":
+      return `<span class="syrup-keyword">${esc(d.s)}</span>`;
     case "br":
       return "\n<br>\n";
     case "indent":

@@ -98,8 +98,25 @@ function exprSpec(e: Expr, ty?: Ty): Spec {
   const w = tyCellWidth(ty);
   if (e.k === "var") return { header: e.name, w, cell: (v) => (v === undefined ? "?" : compact(v)) };
   if (e.k === "cable") return cableSpec(e.items.map((q, i) => exprSpec(q, itemTy(ty, i))), ty);
-  return { header: "", w, cell: (v) => (v === undefined ? "?" : compact(v)) };
+  return tySpec(ty);
 }
+
+// an output that has no name of its own: blank header as wide as its bits, items spaced out
+function tySpec(ty?: Ty): Spec {
+  const w = tyCellWidth(ty);
+  if (!ty || ty.k === "bit") return { header: " ", w, cell: (v) => (v === undefined ? "?" : compact(v)) };
+  const items = ty.items.map(tySpec);
+  return {
+    w,
+    header: " ".repeat(flatBits(ty)),
+    cell: (v) =>
+      Array.isArray(v)
+        ? "[" + items.map((s, i) => pad(s.cell(v[i]), specWidth(s))).join(" ") + "]"
+        : v === undefined ? "?" : compact(v),
+  };
+}
+
+const flatBits = (t: Ty): number => (t.k === "bit" ? 1 : t.items.reduce((n, i) => n + flatBits(i), 0));
 
 const unknownOf = (t: Ty): Value => (t.k === "bit" ? "X" : t.items.map(unknownOf));
 
@@ -160,7 +177,7 @@ function truthTableDoc(ctx: Ctx, name: string): Doc {
     return `{ ${names} -> ${names} }`;
   };
   if (stateful) headers.push({ text: memHead() });
-  outCols.forEach((o) => headers.push({ text: o.spec.header }));
+  outCols.forEach((o) => headers.push({ text: o.ty && hasGraphical(o.ty) ? " ".repeat(flatBits(o.ty)) : o.spec.header || " " }));
   const anyHeader = !!inCols && headers.some((h) => h.text.trim() !== "" || h.text !== "");
 
   const width = widthOfTys(c.ins);

@@ -1,8 +1,7 @@
 # goldens not matched yet; remove a name when it passes
-7segments
+# crash, samples: bisimulation counterexample traces differ from upstream's
+# adc2par catchall diagram displaybug displaybug2 srff: expect svg rendered by graphviz 2.43.0 (we emit/render with whatever dot is installed)
 adc2par
-adc2par-html
-braille
 catchall
 crash
 diagram

@@ -30,6 +30,13 @@ if (typeof opts === "string") {
   process.exit(1);
 }
 
+// plaintext formats draw `display` through Graphviz when it is installed
+const renderDot = (dot: string): string => {
+  const r = Bun.spawnSync(["dot", "-Tsvg"], { stdin: new TextEncoder().encode(dot) });
+  return r.exitCode === 0 ? r.stdout.toString() : dot;
+};
+if (opts.format === "syrup" && Bun.which("dot")) opts.renderDot = renderDot;
+
 const source = await Bun.file(path).text();
 const { log, errorCount, output } = run(source, opts);
 
