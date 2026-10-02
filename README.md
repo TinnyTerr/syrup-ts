@@ -25,11 +25,38 @@ bun install
 bun run index.ts path/to/circuit.syrup
 ```
 
+### Output formats and flags
+
+```bash
+bun run index.ts [--format plain|syrup|html] [-q] [--source-dot] file.syrup
+```
+
+- `plain` (default) — compact plaintext, unchanged.
+- `--syrup` — upstream's plaintext: ASCII-bordered tables, grouped
+  "Circuits `a`, `b`, and `c` are defined." notices. With Graphviz's `dot`
+  installed, `display` is drawn as svg; `--source-dot` prints the source instead.
+- `--html` — the markup the original playground page uses (`syrup-*` classes,
+  Graphviz loaded from a CDN for `display`). The web demo renders this.
+- `-q` — hide "is defined" notices.
+
+Beyond truth tables, simulation and `experiment f = g`, it supports unit tests
+(`experiment f{0}(1) = {1}0`), property tests (`experiment forall X -> ...`),
+holes (`?A`), `anf`, `dnf`, `simplify`, `cost [unfolded] f`, `definition f [X,Y] [bits]`,
+`type f`, `print f`, `display [unfolded] f`, and `<7Segments>` / `<Braille>` outputs.
+Definitions are checked for scope, redefinitions, dead wires, needlessly split
+cables and holes, and failing ones are stubbed out.
+
 ## Tests
 
 ```bash
-bun test
+bun test                      # unit tests + the native goldens
+bun test/native-report.ts     # pass/fail per golden (pass names to get a diff in /tmp)
 ```
+
+`test/native/` holds the upstream Haskell implementation's golden files
+(`.syrup` + `.flags` → `.out`). `test/native.test.ts` runs them in upstream's
+plaintext (or html with `--html`); the ones we don't match byte-for-byte are
+listed in `test/native/known-failures.txt` with the reason.
 
 ## Building
 
@@ -73,8 +100,14 @@ plus `web/demo.html` and deploys the demo to GitHub Pages on pushes to `main`
 - `src/experiments.ts` — truth tables, time-sequence simulation, bisimulation-based
   equivalence checking
 - `src/prelude.ts` — `not`/`and`/`or`/`xor`/`one`, defined in Syrup itself
-- `src/run.ts` — ties parsing + registration + experiments together, one
-  statement at a time so a later syntax error doesn't lose earlier results
+- `src/run.ts` — the engine: pairs declarations with definitions, checks them
+  (`src/check.ts`), runs statements and collects structured messages
+- `src/doc.ts` — message/Doc model and the plain-text and html renderers
+- `src/pretty.ts` — pretty printer for types, expressions and circuits
+- `src/exp.ts` — truth tables, simulation, bisimulation, unit and property tests
+- `src/transforms.ts`, `src/normal.ts`, `src/cost.ts` — typing/print/anf/dnf/simplify/cost/definition
+- `src/display.ts`, `src/dot.ts` — `display` (Graphviz source) and 7-segment/braille cells
+- `src/options.ts` — output format and flags
 - `src/index.ts` — the library's public entry point (barrel export)
 - `index.ts` — CLI entry point
 
