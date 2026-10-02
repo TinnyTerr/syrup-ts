@@ -53,6 +53,8 @@ export interface Table {
   ruled?: boolean;
   /** first body column is a row header (<th>) */
   rowHead?: boolean;
+  /** html cells are not padded to the column width (default: padded) */
+  padHtml?: boolean;
 }
 
 export const cell = (text: string): TCell => ({ text });
@@ -142,10 +144,11 @@ function tableText(t: Table): string {
   const ncols = Math.max(t.headers?.length ?? 0, ...t.groups.flatMap((g) => g.map((r) => r.length)));
   const ws = colWidths(t, ncols);
   const bar = (i: number) => (t.split !== undefined && i === t.split - 1 ? "||" : "|");
+  const lead = t.split === 0 ? "||" : "|";
   const row = (cells: (TCell | undefined)[]) =>
-    "|" + ws.map((w, i) => " " + pad(cells[i]?.text ?? "", w) + " " + bar(i)).join("");
+    lead + ws.map((w, i) => " " + pad(cells[i]?.text ?? "", w) + " " + bar(i)).join("");
   const rule = () =>
-    "|" + ws.map((w, i) => "-".repeat(w + 2) + (t.split !== undefined && i === t.split - 1 ? "++" : i === ncols - 1 ? "|" : "+")).join("");
+    lead + ws.map((w, i) => "-".repeat(w + 2) + (t.split !== undefined && i === t.split - 1 ? "++" : i === ncols - 1 ? "|" : "+")).join("");
   const out: string[] = [];
   if (t.headers) {
     out.push(row(t.headers), rule());
@@ -216,24 +219,25 @@ export function renderMessagesText(msgs: Message[]): string {
 // HTML rendering
 // ---------------------------------------------------------------------------
 
-function th(c: TCell, w: number): string {
-  return `<th><code>${esc(pad(c.text, w))}</code></th>`;
+function th(c: TCell, w: number, padded = true): string {
+  return `<th>${c.html ?? `<code>${esc(padded ? pad(c.text, w) : c.text)}</code>`}</th>`;
 }
 
-function td(c: TCell | undefined, w: number, rowspan?: number): string {
+function td(c: TCell | undefined, w: number, rowspan?: number, padded = true): string {
   const rs = rowspan && rowspan > 1 ? ` rowspan="${rowspan}"` : "";
-  const inner = c?.html ?? `<code>${esc(pad(c?.text ?? "", w))}</code>`;
+  const inner = c?.html ?? `<code>${esc(padded ? pad(c?.text ?? "", w) : c?.text ?? "")}</code>`;
   return `<td${rs}>${inner}</td>`;
 }
 
 function tableHtml(t: Table): string {
   const ncols = Math.max(t.headers?.length ?? 0, ...t.groups.flatMap((g) => g.map((r) => r.length)));
   const ws = colWidths(t, ncols);
-  const withMid = <T>(items: T[], mid: T): T[] =>
-    t.split === undefined ? items : [...items.slice(0, t.split), mid, ...items.slice(t.split)];
+  const withMid = <T>(items: T[], mid: T, skipped = 0): T[] =>
+    t.split === undefined ? items : [...items.slice(0, t.split - skipped), mid, ...items.slice(t.split - skipped)];
+  const padded = t.padHtml !== false;
   let s = '<div class="syrup-table"><table>';
   if (t.headers) {
-    const hs = t.headers.map((h, i) => th(h, ws[i]!));
+    const hs = t.headers.map((h, i) => th(h, ws[i]!, padded));
     s += "<thead><tr>" + withMid(hs, "<th><code></code></th>").join("") + "</tr></thead>";
   }
   s += "<tbody>";
@@ -243,12 +247,12 @@ function tableHtml(t: Table): string {
         .map((r, ri) => {
           const cs: string[] = [];
           for (let i = 0; i < ncols; i++) {
-            if (t.rowHead && i === 0) cs.push(th(r[0] ?? { text: "" }, ws[0]!));
+            if (t.rowHead && i === 0) cs.push(th(r[0] ?? { text: "" }, ws[0]!, padded));
             else if (i < (t.spanCols ?? 0)) {
-              if (ri === 0) cs.push(td(r[i], ws[i]!, g.length));
-            } else cs.push(td(r[i], ws[i]!));
+              if (ri === 0) cs.push(td(r[i], ws[i]!, g.length, padded));
+            } else cs.push(td(r[i], ws[i]!, undefined, padded));
           }
-          return "<tr>" + withMid(cs, "<td><code></code></td>").join("") + "</tr>";
+          return "<tr>" + withMid(cs, "<td><code></code></td>", ri > 0 ? t.spanCols ?? 0 : 0).join("") + "</tr>";
         })
         .join(""),
     )

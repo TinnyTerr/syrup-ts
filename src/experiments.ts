@@ -42,13 +42,13 @@ export function truthTable(reg: Registry, name: string): string {
   return lines.join("\n");
 }
 
-export function simulate(reg: Registry, name: string, steps: Value[][]): string {
+export function simulate(reg: Registry, name: string, steps: Value[][], init: Bit[] = []): string {
   const c = reg.get(name);
   if (!c) throw new RuntimeError(`\`${name}\` is not declared`);
   if (!c.def && !c.isPrimitive) throw new RuntimeError(`Circuit \`${name}\` is a stub (has no definition).`);
   const memPaths = discoverMemPaths(reg, name);
   const lines: string[] = [`Simulation for \`${name}\`:`];
-  let mem = new Map<string, Bit>();
+  let mem = new Map<string, Bit>(memPaths.map((p, i) => [p, init[i] ?? 0] as [string, Bit]));
   steps.forEach((inputs, t) => {
     const key = stateKey(mem, memPaths);
     const { outputs, nextMem } = runComponent(reg, name, inputs, mem);

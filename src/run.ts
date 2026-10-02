@@ -148,7 +148,7 @@ class Engine {
     if (old && !old.prelude) {
       this.push(err(seq("You are redefining the top-level variable ", d.name, ".")));
     }
-    this.reg.set(d.name, { name: d.name, ins: d.ins, outs: d.outs });
+    this.reg.set(d.name, { name: d.name, ins: d.ins, outs: d.outs, prev: old });
     this.pending.set(d.name, d);
     this.lastDecl = d.name;
   }
