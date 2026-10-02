@@ -26,7 +26,7 @@
         "build:cli": "bun build ./index.ts --outfile dist/cli.js --target bun --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --format esm -e mermaid && chmod +x dist/cli.js",
         "build": "rm -rf dist && bun run build:lib && bun run build:cli",
         "typecheck": "tsc --noEmit",
-        "build:web": "bun build ./src/index.ts --outfile dist/web/syrup.esm.js --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --target browser --format esm --minify && bun build ./web/global.ts --outfile dist/web/syrup.js --target browser --format iife --minify",
+        "build:web": "bun build ./src/index.ts --outfile dist/web/syrup.esm.js --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --target browser --format esm --minify && bun build ./web/global.ts --outfile dist/web/syrup.js --target browser --format iife --minify && bun build ./web/demo.tsx --outfile dist/web/demo.js --target browser --format esm --minify",
         "build:exe": "bun build ./index.ts --compile --minify --outfile dist/exe/syrup",
         "build:editors": "(cd obsidian && bun install && bun run build) && (cd vscode && bun run package)",
         "test": "bun test"
@@ -36,6 +36,8 @@
         "typescript": "^7"
     },
     "dependencies": {
-        "mermaid": "^12.0.0"
+        "mermaid": "^12.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     }
 }

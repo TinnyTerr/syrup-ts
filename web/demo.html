@@ -29,28 +29,7 @@
     </style>
   </head>
   <body>
-    <main>
-      <h1>Syrup playground</h1>
-      <p>Run Syrup source code in the browser using the ESM build.</p>
-      <textarea id="source">x, y := xor.
-? x.</textarea>
-      <p><button id="run" type="button">Run</button></p>
-      <pre id="output"></pre>
-    </main>
-    <script type="module">
-      import { run } from "./syrup.esm.js";
-
-      const source = document.getElementById("source");
-      const output = document.getElementById("output");
-      const runButton = document.getElementById("run");
-
-      const render = () => {
-        const result = run(source.value);
-        output.textContent = result.log.join("\n\n");
-      };
-
-      runButton.addEventListener("click", render);
-      render();
-    </script>
+    <main id="app"></main>
+    <script type="module" src="./demo.js"></script>
   </body>
 </html>
