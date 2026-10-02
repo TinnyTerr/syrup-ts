@@ -120,9 +120,9 @@ function Playground() {
                                     <td className="valign-top syrup-input">
                                         <Editor
                                             value={source}
-                                            onChange={() => {
-                                                setSource(source);
-                                                setResult(run(source, { format: "html" }));
+                                            onChange={value => {
+                                                setSource(value);
+                                                setResult(run(value, { format: "html" }));
                                             }}
                                         />
                                         <br />
