@@ -466,10 +466,3 @@ tr:nth-child(even) {
 .syrup-output {
     padding-left: 1em;
 }
-.syrup-table th,
-.syrup-table td {
-    text-align: center;
-}
-.syrup-table textarea {
-    text-align: initial;
-}
