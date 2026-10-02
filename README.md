@@ -59,6 +59,10 @@ secret and `"private"` removed from `package.json`.
 
 Locally: `bun run build:web`, `bun run build:exe`, `bun run build:editors`.
 
+`.github/workflows/pages.yml` builds `dist/web` (including the React demo bundle)
+plus `web/demo.html` and deploys the demo to GitHub Pages on pushes to `main`
+(or manually from Actions -> pages -> Run workflow).
+
 ## Layout
 
 - `src/lexer.ts`, `src/parser.ts` — tokenizer and recursive-descent parser
