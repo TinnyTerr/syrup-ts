@@ -1,6 +1,8 @@
 // Public library API: parse + evaluate Syrup source without touching the
 // filesystem, so this half of the package works in the browser too.
 export { run, type RunResult } from "./run";
+export { defaultOptions, parseOptions, type Options, type Format } from "./options";
+export type { Message, Doc, Level } from "./doc";
 export { newRegistry, type Registry, type Component, RuntimeError } from "./eval";
 export { truthTable, simulate, equivalence } from "./experiments";
 export { toMermaid } from "./diagram";

@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { run, type Registry } from "../src/index";
+import { run } from "../src/index";
 import { PRELUDE } from "../src/prelude";
-import type { Pat } from "../src/ast";
 
 const DEFAULT_SOURCE = `gate1011(<Bit>,<Bit>) -> <Bit>
 gate1011(x, y) = (x&y) | (!x&y) | (!x&!y)
@@ -68,107 +67,28 @@ function Editor({ value, onChange }: { value: string; onChange: (v: string) => v
 
 // --- output ---
 
-// `name` in a log line becomes <code><span class="syrup-function">name</span></code>
-function inline(text: string): ReactNode[] {
-  return text.split("`").map((part, i) =>
-    i % 2 ? <code key={i}><span className="syrup-function">{part}</span></code> : part,
-  );
+// The engine's html output carries <script type="module"> blocks (Graphviz for
+// `display`); scripts injected through innerHTML never run, so re-create them.
+function runScripts(root: HTMLElement) {
+  for (const old of root.querySelectorAll("script")) {
+    const fresh = document.createElement("script");
+    for (const a of old.attributes) fresh.setAttribute(a.name, a.value);
+    fresh.textContent = old.textContent;
+    old.replaceWith(fresh);
+  }
 }
 
-function patNames(p: Pat): string[] {
-  return p.k === "var" ? [p.name] : p.k === "wild" ? ["_"] : p.items.flatMap(patNames);
-}
-
-function TruthTable({ text, reg }: { text: string; reg: Registry }) {
-  const [head, ...rows] = text.split("\n");
-  const name = /`(.+)`/.exec(head!)?.[1] ?? "";
-  if (rows.some((r) => r.includes("{"))) return <pre>{text}</pre>; // stateful: keep the raw layout
-  const cells = rows.map((r) => r.split("|").map((s) => [...s.replace(/[\[\]\s]/g, "")]));
-  const ins = cells[0]?.[0]?.length ?? 0;
-  const names = reg.get(name)?.def?.params.flatMap(patNames) ?? [];
-  return (
-    <>
-      {inline(head!)}
-      <br />
-      <div style={{ paddingLeft: "2ch" }}>
-        <div className="syrup-table">
-          <table>
-            <thead>
-              <tr>
-                {Array.from({ length: ins }, (_, i) => (
-                  <th key={i}><code>{names.length === ins ? names[i] : ""}</code></th>
-                ))}
-                {(cells[0]?.[1] ?? []).map((_, i) => <th key={"o" + i}><code>{i ? " " : ""}</code></th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {cells.map((c, r) => (
-                <tr key={r}>
-                  {[...c[0]!, ...c[1]!].map((b, i) => <td key={i}><code>{b}</code></td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
-  );
-}
-
-let mermaidReady: Promise<any> | undefined;
-function loadMermaid() {
-  mermaidReady ??= (import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs" as string) as Promise<any>).then((m) => {
-    m.default.initialize({
-      startOnLoad: false,
-      theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
-    });
-    return m.default;
-  });
-  return mermaidReady;
-}
-
-let diagramId = 0;
-function Diagram({ code }: { code: string }) {
+function Output({ html }: { html: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    let live = true;
-    loadMermaid()
-      .then((m) => m.render(`syrup-graph-${diagramId++}`, code))
-      .then(({ svg }) => { if (live && ref.current) ref.current.innerHTML = svg; })
-      .catch((e) => { if (live && ref.current) ref.current.textContent = String(e); });
-    return () => { live = false; };
-  }, [code]);
-  return <div ref={ref} />;
-}
-
-function Entry({ text, reg }: { text: string; reg: Registry }) {
-  if (text.startsWith("Error:")) return <div className="syrup-error">{text.slice(7)}</div>;
-  if (text.startsWith("(skipped")) return <div className="syrup-warning">{inline(text.slice(1, -1))}</div>;
-  if (text.startsWith("```mermaid")) {
-    const code = text.replace(/^```mermaid\n/, "").replace(/\n```$/, "");
-    const name = /subgraph (\S+?)\[/.exec(code)?.[1];
-    return (
-      <div className="syrup-happy">
-        Displaying <code><span className="syrup-function">{name}</span></code>:
-        <br />
-        <Diagram code={code} />
-      </div>
-    );
-  }
-  if (text.startsWith("Truth table for")) return <div className="syrup-happy"><TruthTable text={text} reg={reg} /></div>;
-  if (/^(Circuit|Type) `.*` is defined\.$/.test(text)) return <div className="syrup-comment">{inline(text)}</div>;
-  const [first, ...rest] = text.split("\n");
-  return (
-    <div className="syrup-happy">
-      {inline(first!)}
-      {rest.length > 0 && <div className="syrup-code">{rest.join("\n")}</div>}
-    </div>
-  );
+    if (ref.current) runScripts(ref.current);
+  }, [html]);
+  return <div ref={ref} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 function Playground() {
   const [source, setSource] = useState(DEFAULT_SOURCE);
-  const [result, setResult] = useState(() => run(DEFAULT_SOURCE));
+  const [result, setResult] = useState(() => run(DEFAULT_SOURCE, { format: "html" }));
 
   return (
     <>
@@ -176,7 +96,7 @@ function Playground() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          setResult(run(source));
+          setResult(run(source, { format: "html" }));
         }}
       >
         <fieldset>
@@ -192,12 +112,7 @@ function Playground() {
                     <input type="submit" value="Send" />
                   </td>
                   <td className="valign-top syrup-output">
-                    {result.log.map((text, i) => (
-                      <React.Fragment key={i}>
-                        {i > 0 && <br />}
-                        <Entry text={text} reg={result.registry} />
-                      </React.Fragment>
-                    ))}
+                    <Output html={result.output} />
                   </td>
                 </tr>
               </tbody>

@@ -1,0 +1,25 @@
+# goldens not matched yet; remove a name when it passes
+7segments
+adc2par
+adc2par-html
+braille
+catchall
+crash
+diagram
+diagram-html
+diagram-source
+displaybug
+displaybug2
+dup
+experiment
+memories
+not-impossible-impossible-hadd
+propertytest
+samples
+srff
+stopwatch
+tables-html
+typeunfolding
+unfold
+unittest
+unittest-html
