@@ -2,13 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { run } from "../src/index";
 import { PRELUDE } from "../src/prelude";
+import { messageText } from "../src/doc";
+import type { Component, Registry } from "../src/eval";
 
-const DEFAULT_SOURCE = `gate1011(<Bit>,<Bit>) -> <Bit>
-gate1011(x, y) = (x&y) | (!x&y) | (!x&!y)
-
-experiment gate1011
-display gate1011
-`;
+const DEFAULT_SOURCE = ``;
 
 // --- highlighting: same classes and priorities as the original CodeFlask grammar ---
 
@@ -97,6 +94,40 @@ function Output({ html }: { html: string }) {
     return <div ref={ref} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+function formatType(type: Component["ins"][number]): string {
+    if (type.k === "bit") return "bit";
+    return `[${type.items.map(formatType).join(", ")}]`;
+}
+
+function RegistryDetails({ registry }: { registry: Registry }) {
+    const components = [...registry.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return (
+        <details>
+            <summary>Registry ({components.length} components)</summary>
+            <table className="syrup-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Inputs</th>
+                        <th>Outputs</th>
+                        <th>Kind</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {components.map(component => (
+                        <tr key={component.name}>
+                            <td><code>{component.name}</code></td>
+                            <td>{component.ins.map(formatType).join(", ") || "-"}</td>
+                            <td>{component.outs.map(formatType).join(", ") || "-"}</td>
+                            <td>{component.isPrimitive ? "primitive" : component.def ? "defined" : "declared"}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </details>
+    );
+}
+
 function Playground() {
     const [source, setSource] = useState(DEFAULT_SOURCE);
     const [result, setResult] = useState(() => run(DEFAULT_SOURCE, { format: "html" }));
@@ -112,8 +143,26 @@ function Playground() {
             >
                 <fieldset>
                     <div className="boxform">
-                        <h3>Building Simple Circuits</h3>
+                        <h3>Syrup Playground</h3>
                         <pre>{PRELUDE.trim()}</pre>
+
+                        <details>
+                            <summary>
+                                Diagnostics ({result.errorCount} errors, {result.messages.length} messages)
+                            </summary>
+                            {result.messages.length ? (
+                                <ul>
+                                    {result.messages.map((message, index) => (
+                                        <li key={index} className={`syrup-${message.level}`}>
+                                            {messageText(message)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p>No diagnostics.</p>
+                            )}
+                        </details>
+                        <RegistryDetails registry={result.registry} />
                         <table className="syrup-table">
                             <tbody>
                                 <tr>
