@@ -122,6 +122,8 @@ both highlighters use.
   (`shared/gen-textmate.ts`) and builds a `.vsix`.
 - `obsidian/` — a ```` ```ask ```` block is highlighted only (tokens in `shared/ask-tokens.ts`); a ```` ```syrup ```` block runs the program and shows the
   highlighted source, then the output (mermaid diagrams render natively).
+  All `syrup` blocks in a note act as one file: each block sees the ones above it,
+  including ones hidden in `%% ... %%` comments, and only shows its own output.
   `cd obsidian && bun install && bun run build`, then copy or symlink
   `manifest.json`, `main.js`, `styles.css` into
   `<vault>/.obsidian/plugins/syrup/`. Editor (live preview) highlighting uses

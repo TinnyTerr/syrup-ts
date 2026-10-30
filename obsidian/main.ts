@@ -2,6 +2,21 @@ import { MarkdownRenderer, Plugin, loadPrism } from "obsidian";
 import { run } from "../src/index";
 import { askPrismGrammar, defineAskCm5Mode, defineCm5Mode, prismGrammar } from "./highlight";
 
+// every ```syrup block in the note, in order; `hidden` ones sit inside %% comments %%
+function noteBlocks(text: string) {
+  const blocks: { line: number; code: string; hidden: boolean }[] = [];
+  const re = /^```syrup[^\n]*\n([\s\S]*?)^```/gm;
+  for (let m; (m = re.exec(text)); ) {
+    const before = text.slice(0, m.index);
+    blocks.push({
+      line: before.split("\n").length - 1,
+      code: m[1]!,
+      hidden: (before.match(/%%/g)?.length ?? 0) % 2 === 1,
+    });
+  }
+  return blocks;
+}
+
 export default class SyrupPlugin extends Plugin {
   override async onload() {
     defineCm5Mode();
@@ -24,7 +39,19 @@ export default class SyrupPlugin extends Plugin {
       const out = el.createDiv({ cls: "syrup-output" });
       let log: string[];
       try {
-        log = run(source).log;
+        // earlier blocks (shown or hidden in %% comments %%) form one file with this one
+        const info = ctx.getSectionInfo(el);
+        const prior = info
+          ? noteBlocks(info.text).filter((b) => b.line < info.lineStart).map((b) => b.code)
+          : [];
+        if (prior.length === 0) log = run(source).log;
+        else {
+          const head = prior.join("\n\n");
+          const before = run(head);
+          const all = run(`${head}\n\n${source}`).log;
+          // only show this block's output; if the code above it is broken, show that instead
+          log = before.errorCount > 0 ? before.log : all.slice(before.log.length);
+        }
       } catch (e) {
         log = [`Error: ${(e as Error).message}`];
       }
