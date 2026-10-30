@@ -1,12 +1,20 @@
 import { MarkdownRenderer, Plugin, loadPrism } from "obsidian";
 import { run } from "../src/index";
-import { defineCm5Mode, prismGrammar } from "./highlight";
+import { askPrismGrammar, defineAskCm5Mode, defineCm5Mode, prismGrammar } from "./highlight";
 
 export default class SyrupPlugin extends Plugin {
   override async onload() {
     defineCm5Mode();
+    defineAskCm5Mode();
     const prism = await loadPrism();
     prism.languages.syrup = prismGrammar;
+    prism.languages.ask = askPrismGrammar;
+
+    this.registerMarkdownCodeBlockProcessor("ask", (source, el) => {
+      const pre = el.createEl("pre", { cls: "ask-source language-ask" });
+      const code = pre.createEl("code", { cls: "language-ask" });
+      code.innerHTML = prism.highlight(source, prism.languages.ask, "ask");
+    });
 
     this.registerMarkdownCodeBlockProcessor("syrup", async (source, el, ctx) => {
       const pre = el.createEl("pre", { cls: "syrup-source language-syrup" });

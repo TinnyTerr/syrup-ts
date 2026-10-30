@@ -117,10 +117,10 @@ Separate from the library and CLI; each has its own manifest and build, and
 nothing in `src/` depends on them. `shared/tokens.ts` is the one token list
 both highlighters use.
 
-- `vscode/` — highlighting for `.syrup` files and ```` ```syrup ```` fences.
+- `vscode/` — highlighting for `.syrup` files and ```` ```syrup ```` fences, and for `.ask` files (the CS103 proof assistant).
   `cd vscode && bun run package` regenerates the TextMate grammar
   (`shared/gen-textmate.ts`) and builds a `.vsix`.
-- `obsidian/` — a ```` ```syrup ```` block runs the program and shows the
+- `obsidian/` — a ```` ```ask ```` block is highlighted only (tokens in `shared/ask-tokens.ts`); a ```` ```syrup ```` block runs the program and shows the
   highlighted source, then the output (mermaid diagrams render natively).
   `cd obsidian && bun install && bun run build`, then copy or symlink
   `manifest.json`, `main.js`, `styles.css` into
