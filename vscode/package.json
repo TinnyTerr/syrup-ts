@@ -1,7 +1,7 @@
 {
     "name": "syrup-vscode",
     "displayName": "Syrup",
-    "description": "Syntax highlighting for the Syrup circuit language",
+    "description": "Syntax highlighting for the Syrup circuit language and ask",
     "version": "0.1.0",
     "publisher": "tinnyterr",
     "private": true,
@@ -28,6 +28,17 @@
                     ".syrup"
                 ],
                 "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "ask",
+                "aliases": [
+                    "Ask",
+                    "ask"
+                ],
+                "extensions": [
+                    ".ask"
+                ],
+                "configuration": "./ask-language-configuration.json"
             }
         ],
         "grammars": [
@@ -35,6 +46,11 @@
                 "language": "syrup",
                 "scopeName": "source.syrup",
                 "path": "./syntaxes/syrup.tmLanguage.json"
+            },
+            {
+                "language": "ask",
+                "scopeName": "source.ask",
+                "path": "./syntaxes/ask.tmLanguage.json"
             }
         ]
     }

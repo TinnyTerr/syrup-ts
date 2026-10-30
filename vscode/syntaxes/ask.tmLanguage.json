@@ -1,0 +1,65 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Ask",
+  "scopeName": "source.ask",
+  "patterns": [
+    {
+      "name": "comment.block.ask",
+      "begin": "\\{-",
+      "end": "-\\}",
+      "patterns": [
+        {
+          "include": "#block"
+        }
+      ]
+    },
+    {
+      "name": "comment.line.double-dash.ask",
+      "match": "--.*"
+    },
+    {
+      "name": "string.quoted.double.ask",
+      "match": "\"[^\"]*\""
+    },
+    {
+      "name": "markup.inserted.ask",
+      "match": "\\b(?:proven|defined|parsed)\\b"
+    },
+    {
+      "name": "keyword.other.primary.ask",
+      "match": "\\?|\\b(?:prove|define|parse)\\b"
+    },
+    {
+      "name": "storage.modifier.ask",
+      "match": "\\b(?:given)\\b"
+    },
+    {
+      "name": "keyword.control.ask",
+      "match": "::|->|=|\\||\\b(?:data|grammar|prop|where|from|by|inductively|tested|test|under|infixl|infixr)\\b"
+    },
+    {
+      "name": "storage.type.ask",
+      "match": "<[A-Za-z][A-Za-z_0-9]+>"
+    },
+    {
+      "name": "entity.name.type.ask",
+      "match": "\\b[A-Z][A-Za-z0-9_']*"
+    },
+    {
+      "name": "punctuation.ask",
+      "match": "[()\\[\\]]"
+    }
+  ],
+  "repository": {
+    "block": {
+      "name": "comment.block.ask",
+      "begin": "\\{-",
+      "end": "-\\}",
+      "patterns": [
+        {
+          "include": "#block"
+        }
+      ]
+    }
+  }
+}
