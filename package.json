@@ -1,5 +1,5 @@
 {
-    "name": "syrup",
+    "name": "syrup-ts",
     "version": "0.1.0",
     "type": "module",
     "private": false,
@@ -15,8 +15,8 @@
     },
     "files": [
         "dist",
-        "index.ts",
-        "src"
+        "LICENCE",
+        "README.md"
     ],
     "bin": {
         "syrup": "./dist/cli.js"
