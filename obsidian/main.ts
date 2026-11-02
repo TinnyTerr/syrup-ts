@@ -17,8 +17,12 @@ function noteBlocks(text: string) {
   return blocks;
 }
 
+const tag = "[syrup]";
+const dbg = (...a: unknown[]) => console.debug(tag, ...a);
+
 export default class SyrupPlugin extends Plugin {
   override async onload() {
+    dbg("loaded");
     defineCm5Mode();
     defineAskCm5Mode();
     const prism = await loadPrism();
@@ -47,9 +51,13 @@ export default class SyrupPlugin extends Plugin {
       try {
         // earlier blocks (shown or hidden in %% comments %%) form one file with this one
         const info = ctx.getSectionInfo(el);
-        const prior = info
-          ? noteBlocks(info.text).filter((b) => b.line < info.lineStart).map((b) => b.code)
-          : [];
+        const all_ = info ? noteBlocks(info.text) : [];
+        const prior = info ? all_.filter((b) => b.line < info.lineStart).map((b) => b.code) : [];
+        dbg("compute block", {
+          path: ctx.sourcePath, lineStart: info?.lineStart, hasInfo: !!info,
+          noteBlocks: all_.map((b) => ({ line: b.line, hidden: b.hidden, chars: b.code.length })),
+          priorCount: prior.length,
+        });
         if (prior.length === 0) log = run(source).log;
         else {
           const head = prior.join("\n\n");
@@ -57,8 +65,13 @@ export default class SyrupPlugin extends Plugin {
           const all = run(`${head}\n\n${source}`).log;
           // only show this block's output; if the code above it is broken, show that instead
           log = before.errorCount > 0 ? before.log : all.slice(before.log.length);
+          dbg("ran", {
+            headErrors: before.errorCount, headLog: before.log.length, allLog: all.length,
+            shown: log.length,
+          });
         }
       } catch (e) {
+        console.error(tag, "compute failed", e);
         log = [`Error: ${(e as Error).message}`];
       }
       for (const entry of log) {
