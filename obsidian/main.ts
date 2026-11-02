@@ -63,8 +63,15 @@ export default class SyrupPlugin extends Plugin {
           const head = prior.join("\n\n");
           const before = run(head);
           const all = run(`${head}\n\n${source}`).log;
-          // only show this block's output; if the code above it is broken, show that instead
-          log = before.errorCount > 0 ? before.log : all.slice(before.log.length);
+          // only this block's output: drop everything the code above it already said
+          // (multiset diff, since end-of-run notices like unfinished declarations can move)
+          const seen = new Map<string, number>();
+          for (const l of before.log) seen.set(l, (seen.get(l) ?? 0) + 1);
+          log = all.filter((l) => {
+            const n = seen.get(l) ?? 0;
+            if (n > 0) { seen.set(l, n - 1); return false; }
+            return true;
+          });
           dbg("ran", {
             headErrors: before.errorCount, headLog: before.log.length, allLog: all.length,
             shown: log.length,
