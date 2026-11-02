@@ -5,7 +5,7 @@ import { askPrismGrammar, defineAskCm5Mode, defineCm5Mode, prismGrammar } from "
 // every ```syrup block in the note, in order; `hidden` ones sit inside %% comments %%
 function noteBlocks(text: string) {
   const blocks: { line: number; code: string; hidden: boolean }[] = [];
-  const re = /^```syrup[^\n]*\n([\s\S]*?)^```/gm;
+  const re = /^```syrup(?![^\s])[^\n]*\n([\s\S]*?)^```/gm;
   for (let m; (m = re.exec(text)); ) {
     const before = text.slice(0, m.index);
     blocks.push({
