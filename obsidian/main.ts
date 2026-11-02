@@ -31,7 +31,13 @@ export default class SyrupPlugin extends Plugin {
       code.innerHTML = prism.highlight(source, prism.languages.ask, "ask");
     });
 
-    this.registerMarkdownCodeBlockProcessor("syrup", async (source, el, ctx) => {
+    this.registerMarkdownCodeBlockProcessor("syrup", (source, el) => {
+      const pre = el.createEl("pre", { cls: "syrup-source language-syrup" });
+      const code = pre.createEl("code", { cls: "language-syrup" });
+      code.innerHTML = prism.highlight(source, prism.languages.syrup, "syrup");
+    });
+
+    this.registerMarkdownCodeBlockProcessor("syrup-compute", async (source, el, ctx) => {
       const pre = el.createEl("pre", { cls: "syrup-source language-syrup" });
       const code = pre.createEl("code", { cls: "language-syrup" });
       code.innerHTML = prism.highlight(source, prism.languages.syrup, "syrup");
