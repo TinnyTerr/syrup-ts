@@ -1,11 +1,16 @@
-import { MarkdownRenderer, Plugin, loadPrism } from "obsidian";
+import { MarkdownRenderer, type MarkdownPostProcessorContext, Plugin, loadPrism } from "obsidian";
 import { run } from "../src/index";
 import { askPrismGrammar, defineAskCm5Mode, defineCm5Mode, prismGrammar } from "./highlight";
 
-// every ```syrup block in the note, in order; `hidden` ones sit inside %% comments %%
+// fence flavours: plain `syrup` only highlights; `add` feeds the note's shared file;
+// `compute` shows output below; the combined ones do both
+const ADD = ["syrup-add", "syrup-compute-add", "syrup-add-compute"];
+const COMPUTE = ["syrup-compute", "syrup-compute-add", "syrup-add-compute"];
+
+// every block in the note that feeds the shared file, in order; `hidden` ones sit inside %% comments %%
 function noteBlocks(text: string) {
   const blocks: { line: number; code: string; hidden: boolean }[] = [];
-  const re = /^```syrup(?![^\s])[^\n]*\n([\s\S]*?)^```/gm;
+  const re = /^```(?:syrup-add|syrup-compute-add|syrup-add-compute)(?![^\s])[^\n]*\n([\s\S]*?)^```/gm;
   for (let m; (m = re.exec(text)); ) {
     const before = text.slice(0, m.index);
     blocks.push({
@@ -35,17 +40,27 @@ export default class SyrupPlugin extends Plugin {
       code.innerHTML = prism.highlight(source, prism.languages.ask, "ask");
     });
 
-    this.registerMarkdownCodeBlockProcessor("syrup", (source, el) => {
+    const showSource = (source: string, el: HTMLElement) => {
       const pre = el.createEl("pre", { cls: "syrup-source language-syrup" });
       const code = pre.createEl("code", { cls: "language-syrup" });
       code.innerHTML = prism.highlight(source, prism.languages.syrup, "syrup");
-    });
+    };
 
-    this.registerMarkdownCodeBlockProcessor("syrup-compute", async (source, el, ctx) => {
-      const pre = el.createEl("pre", { cls: "syrup-source language-syrup" });
-      const code = pre.createEl("code", { cls: "language-syrup" });
-      code.innerHTML = prism.highlight(source, prism.languages.syrup, "syrup");
+    // highlight only; add-only blocks feed the shared file but never show output
+    for (const lang of ["syrup", "syrup-add"]) {
+      this.registerMarkdownCodeBlockProcessor(lang, (source, el) => showSource(source, el));
+    }
 
+    for (const lang of COMPUTE) {
+      this.registerMarkdownCodeBlockProcessor(lang, async (source, el, ctx) => {
+        showSource(source, el);
+        await this.compute(source, el, ctx);
+      });
+    }
+  }
+
+  async compute(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
+    {
       const out = el.createDiv({ cls: "syrup-output" });
       let log: string[];
       try {
@@ -94,6 +109,6 @@ export default class SyrupPlugin extends Plugin {
           });
         }
       }
-    });
+    }
   }
 }

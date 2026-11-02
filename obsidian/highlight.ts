@@ -29,6 +29,10 @@ const cmRules: [string, RegExp][] = [
 export function defineCm5Mode(): boolean {
   const CM = (window as any).CodeMirror;
   if (!CM?.defineMode) return false;
+  // every fence flavour highlights the same way
+  for (const name of ["syrup-add", "syrup-compute", "syrup-compute-add", "syrup-add-compute"]) {
+    CM.defineMode(name, (cfg: any) => CM.getMode(cfg, "syrup"));
+  }
   CM.defineMode("syrup", () => ({
     token(stream: any) {
       if (stream.eatSpace()) return null;

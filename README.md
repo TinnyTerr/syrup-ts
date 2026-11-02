@@ -120,10 +120,11 @@ both highlighters use.
 - `vscode/` — highlighting for `.syrup` files and ```` ```syrup ```` fences, and for `.ask` files (the CS103 proof assistant).
   `cd vscode && bun run package` regenerates the TextMate grammar
   (`shared/gen-textmate.ts`) and builds a `.vsix`.
-- `obsidian/` — a ```` ```ask ```` block is highlighted only (tokens in `shared/ask-tokens.ts`); a ```` ```syrup ```` block runs the program and shows the
-  highlighted source, then the output (mermaid diagrams render natively).
-  All `syrup` blocks in a note act as one file: each block sees the ones above it,
-  including ones hidden in `%% ... %%` comments, and only shows its own output.
+- `obsidian/` — a ```` ```ask ```` block is highlighted only (tokens in `shared/ask-tokens.ts`). Syrup fences:
+  `syrup` highlights only; `syrup-add` adds its code to the note's shared file (output hidden);
+  `syrup-compute` runs the shared file above it plus itself and shows only its own output below
+  (mermaid diagrams render natively); `syrup-compute-add` / `syrup-add-compute` do both.
+  Blocks may sit in `%% ... %%` comments and still count.
   `cd obsidian && bun install && bun run build`, then copy or symlink
   `manifest.json`, `main.js`, `styles.css` into
   `<vault>/.obsidian/plugins/syrup/`. Editor (live preview) highlighting uses
