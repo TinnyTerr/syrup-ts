@@ -49,7 +49,7 @@ syrup --test tests.syrup circuit.syrup     # prints failures + a summary, exits 
 ```
 
 Library: `run(src, { tests: "..." }).tests` gives `{ passed, failed, results }`.
-The web playground's presets panel is hidden; press F9 to toggle it. It also has a Tests box with a live pass/fail count.
+The web playground's presets, diagnostics, tests and registry panels are all hidden; press F9 to toggle them. The tests box with a live pass/fail count.
 
 ### Output formats and flags
 
