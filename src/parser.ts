@@ -410,6 +410,22 @@ function matchParen(text: string, open: number): number {
   return -1;
 }
 
+// `table f` then indented rows `00 | 1`; brackets and spaces are ignored, `_` is a wildcard.
+function parseTable(chunk: string): Stmt {
+  const [first, ...body] = chunk.trim().split("\n");
+  const m = /^table\s+([A-Za-z][A-Za-z0-9]*)$/.exec(first!.trim());
+  if (!m) throw new ParseError(`malformed table: "${chunk}"`);
+  const rows = body.filter((l) => l.trim() !== "").map((l) => {
+    const parts = l.split("|");
+    const clean = (t: string) => t.replace(/[\s\[\]]/g, "");
+    if (parts.length !== 2 || !/^[01_]+$/.test(clean(parts[0]!)) || !/^[01_]+$/.test(clean(parts[1]!))) {
+      throw new ParseError(`malformed table row: "${l.trim()}" (expected e.g. \`01 | 1\`)`);
+    }
+    return { ins: clean(parts[0]!), outs: clean(parts[1]!) };
+  });
+  return { k: "expTable", name: m[1]!, rows };
+}
+
 function parseExperiment(chunk: string): Stmt {
   const rest = chunk.trim().slice("experiment".length).trim();
 
@@ -518,6 +534,7 @@ export function parseChunk(chunk: string, aliases: TypeAliases = new Map()): Stm
 function parseChunkInner(chunk: string, aliases: TypeAliases): Stmt {
   const head = chunk.trimStart();
   if (/^experiment\b/.test(head)) return parseExperiment(chunk);
+  if (/^table\b/.test(head)) return parseTable(chunk);
   if (/^display\b/.test(head)) return { k: "display", ...parseUnfolding(chunk, "display") };
   if (/^cost\b/.test(head)) return { k: "cost", ...parseUnfolding(chunk, "cost") };
   if (/^type\s+</.test(head)) return parseTypeDef(chunk, aliases);

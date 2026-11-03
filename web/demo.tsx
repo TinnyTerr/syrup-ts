@@ -131,6 +131,7 @@ function RegistryDetails({ registry }: { registry: Registry }) {
 function Playground() {
     const [source, setSource] = useState(DEFAULT_SOURCE);
     const [tests, setTests] = useState("");
+    const [testsLang, setTestsLang] = useState<"syrup" | "js">("syrup");
     // presets, diagnostics, tests and the registry are hidden until F9 (they all keep working while hidden)
     const [showPresets, setShowPresets] = useState(false);
     useEffect(() => {
@@ -150,8 +151,8 @@ function Playground() {
     const [draftSrc, setDraftSrc] = useState("");
     const all: Record<string, string> = { ...BUILTIN_PRESETS, ...custom };
     const result = useMemo(
-        () => run(source, { format: "html", presets: enabled, presetDefs: custom, tests }),
-        [source, tests, enabled, custom],
+        () => run(source, { format: "html", presets: enabled, presetDefs: custom, tests, testsLang }),
+        [source, tests, testsLang, enabled, custom],
     );
     const toggle = (n: string) => setEnabled(e => (e.includes(n) ? e.filter(x => x !== n) : [...e, n]));
     const addPreset = () => {
@@ -229,8 +230,13 @@ function Playground() {
                                 Tests ({result.tests.passed} passed, {result.tests.failed} failed)
                             </summary>
                             <p>
-                                Unit tests, <code>forall</code> properties and <code>f = g</code> experiments, run
-                                against the code below.
+                                Syrup: experiments and partial truth tables (<code>table f</code> with indented{" "}
+                                <code>01 | 1</code> rows, <code>_</code> = don't care). JS: <code>table(name, rows)</code>,{" "}
+                                <code>row</code>, <code>test</code>, <code>assert</code>.{" "}
+                                <select value={testsLang} onChange={e => setTestsLang(e.target.value as "syrup" | "js")}>
+                                    <option value="syrup">syrup</option>
+                                    <option value="js">js</option>
+                                </select>
                             </p>
                             <Editor
                                 value={tests}

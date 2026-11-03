@@ -11,6 +11,8 @@ export interface Options {
   presetDefs: Record<string, string>;
   /** test source (unit tests, `forall` properties, `experiment f = g`) run against the program after it; results land in `RunResult.tests` */
   tests: string;
+  /** language of `tests`: Syrup experiments (and `table` blocks), or a JS snippet using `table`, `row`, `test`, `assert` */
+  testsLang: "syrup" | "js";
   /** hide "is defined" notices */
   quiet: boolean;
   /** with html output, print Graphviz source for `display` instead of rendering it */
@@ -19,7 +21,7 @@ export interface Options {
   renderDot?: (dot: string) => string;
 }
 
-export const defaultOptions: Options = { format: "plain", presets: [], presetDefs: {}, tests: "", quiet: false, sourceDot: false };
+export const defaultOptions: Options = { format: "plain", presets: [], presetDefs: {}, tests: "", testsLang: "syrup", quiet: false, sourceDot: false };
 
 /** Parse upstream-style flags (`--html`, `-q`, `--source-dot`, `--format X`). */
 export function parseOptions(base: Options, flags: string[]): Options | string {

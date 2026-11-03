@@ -140,3 +140,12 @@ test("tests run against the program and are reported", () => {
   expect(bad.tests.failed).toBe(1);
   expect(bad.errorCount).toBeGreaterThan(0);
 });
+
+test("partial truth table tests, syrup and js", () => {
+  const src = "xor2(<Bit>,<Bit>) -> <Bit>\nxor2(A,B) = (A & !B) | (!A & B)\n";
+  const o = { presets: ["gates"] };
+  const a = run0(src, { ...o, tests: "table xor2\n  01 | 1\n  1_ | _\n  11 | 1" });
+  expect([a.tests.passed, a.tests.failed]).toEqual([3, 1]);
+  const b = run0(src, { ...o, testsLang: "js", tests: 'table("xor2", {"11":"0"}); test("x", () => assert(row("xor2","10")==="1"))' });
+  expect([b.tests.passed, b.tests.failed]).toEqual([2, 0]);
+});

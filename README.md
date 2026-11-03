@@ -48,7 +48,24 @@ kept apart from the program and run against it afterwards.
 syrup --test tests.syrup circuit.syrup     # prints failures + a summary, exits 1 on failure
 ```
 
-Library: `run(src, { tests: "..." }).tests` gives `{ passed, failed, results }`.
+Tests can also be a `.js` file. Either way you can give only some rows of a
+truth table; unlisted rows aren't checked. `_` in outputs is a don't-care, `_` in
+inputs covers both 0 and 1 (brackets and spaces are ignored).
+
+```
+table xor                 # syrup
+  01 | 1
+  11 | 0
+  1_ | _
+```
+
+```js
+table("xor", { "01": "1", "11": "0" });   // or [["01","1"], ...]
+row("xor", "10");                          // -> "1"
+test("xor is symmetric", () => assert(row("xor","01") === row("xor","10")));
+```
+
+Library: `run(src, { tests: "...", testsLang: "js" }).tests` gives `{ passed, failed, results }`.
 The web playground's presets, diagnostics, tests and registry panels are all hidden; press F9 to toggle them. The tests box with a live pass/fail count.
 
 ### Output formats and flags

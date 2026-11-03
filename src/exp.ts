@@ -6,7 +6,7 @@ import {
   br, seq, code, circ, fn, indent, sepBy,
 } from "./doc";
 import {
-  type ExpSim, type ExpUnit, type ExpForall, type Expr, type Pat, type Ty, type ValueLit,
+  type ExpSim, type ExpUnit, type ExpTable, type ExpForall, type Expr, type Pat, type Ty, type ValueLit,
   BIT, tyToString, tyWidth, indexDef,
 } from "./ast";
 import {
@@ -653,3 +653,56 @@ export function runForall(ctx: Ctx, s: ExpForall): Message[] {
   ));
 }
 
+
+// ---------------------------------------------------------------------------
+// partial truth tables
+// ---------------------------------------------------------------------------
+
+/** Output bits (flat, brackets dropped) of `name` for flat input bits, memory all 0. */
+export function evalRow(reg: Registry, name: string, ins: string): string {
+  const c = getComp(reg, name);
+  if (isStub(c)) throw stubError(name);
+  const width = widthOfTys(c.ins);
+  if (ins.length !== width) {
+    throw new RuntimeError(`\`${name}\` takes ${width} input bit${width === 1 ? "" : "s"}, but \`${ins}\` has ${ins.length}.`);
+  }
+  const layout = memLayout(reg, name);
+  const flat = [...ins].map((b) => Number(b) as Bit);
+  const r = runComponent(reg, name, reshapeList(flat, c.ins), memMap(layout.paths, layout.paths.map(() => 0 as Bit)));
+  return flatKey(r.outputs);
+}
+
+const expandWild = (s: string): string[] =>
+  s.includes("_") ? [...expandWild(s.replace("_", "0")), ...expandWild(s.replace("_", "1"))] : [s];
+
+/** Check only the rows given; outputs may use `_` for don't-care. One result per row. */
+export function checkTable(
+  reg: Registry, name: string, rows: { ins: string; outs: string }[],
+): { ok: boolean; text: string }[] {
+  const out: { ok: boolean; text: string }[] = [];
+  for (const row of rows) {
+    for (const ins of expandWild(row.ins)) {
+      const label = `${name}: ${ins} | ${row.outs}`;
+      try {
+        const got = evalRow(reg, name, ins);
+        if (got.length !== row.outs.length) {
+          out.push({ ok: false, text: `${label} — \`${name}\` has ${got.length} output bit${got.length === 1 ? "" : "s"}, the row gives ${row.outs.length}.` });
+          continue;
+        }
+        const bad = [...row.outs].some((w, i) => w !== "_" && w !== got[i]);
+        out.push(bad ? { ok: false, text: `${label} — expected ${row.outs} but got ${got}.` } : { ok: true, text: label });
+      } catch (e) {
+        if (!(e instanceof RuntimeError)) throw e;
+        out.push({ ok: false, text: `${label} — ${e.message}` });
+      }
+    }
+  }
+  return out;
+}
+
+export function runTable(ctx: Ctx, s: ExpTable): Message[] {
+  return checkTable(ctx.reg, s.name, s.rows).map((r) => ({
+    level: r.ok ? "happy" : "error",
+    doc: seq(r.text),
+  }));
+}

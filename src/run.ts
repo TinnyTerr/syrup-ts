@@ -13,7 +13,7 @@ import {
   mergeDefined, messageText, renderMessagesText, renderMessagesHtml,
 } from "./doc";
 import { tyDoc } from "./pretty";
-import { runTruth, runEquiv, runSim, runUnit, runForall } from "./exp";
+import { runTable, checkTable, evalRow, runTruth, runEquiv, runSim, runUnit, runForall } from "./exp";
 import { runDisplay } from "./display";
 import {
   runTyping, runPrint, runAnf, runDnf, runSimplify, runCost, runDefinition,
@@ -277,6 +277,7 @@ class Engine {
   dispatch(s: Stmt): Message[] {
     const c = this.ctx;
     switch (s.k) {
+      case "expTable": return runTable(c, s);
       case "expTruth": return runTruth(c, s.name);
       case "expEquiv": return runEquiv(c, s.a, s.b);
       case "expSim": return runSim(c, s);
@@ -302,6 +303,31 @@ function patText(p: import("./ast").Pat): string {
   return `[${p.items.map(patText).join(", ")}]`;
 }
 
+type Rows = [string, string][] | Record<string, string>;
+
+// JS tests: `table(circuit, rows)` (rows may be partial; `_` in outputs is a don't-care),
+// `row(circuit, inputs)` -> output bits, `test(label, fn)`, `assert(cond, msg)`.
+function runJsTests(eng: Engine, code: string, record: (ok: boolean, text: string) => void): void {
+  const clean = (v: unknown) => String(v).replace(/[\s\[\]]/g, "");
+  const api = {
+    table(name: string, rows: Rows) {
+      const list = Array.isArray(rows) ? rows : Object.entries(rows);
+      const checked = checkTable(eng.reg, name, list.map(([i, o]) => ({ ins: clean(i), outs: clean(o) })));
+      for (const r of checked) record(r.ok, r.text);
+    },
+    row: (name: string, ins: string | number) => evalRow(eng.reg, name, clean(ins)),
+    test(label: string, fn: () => void) {
+      try { fn(); record(true, label); } catch (e) { record(false, `${label} — ${e instanceof Error ? e.message : e}`); }
+    },
+    assert(cond: unknown, msg = "assertion failed") { if (!cond) throw new Error(msg); },
+  };
+  try {
+    new Function(...Object.keys(api), code)(...Object.values(api));
+  } catch (e) {
+    record(false, `tests threw: ${e instanceof Error ? e.message : e}`);
+  }
+}
+
 export function run(userSource: string, options: Partial<Options> = {}): RunResult {
   const opts: Options = { ...defaultOptions, ...options };
   const eng = new Engine({ ...opts, quiet: false }, false);
@@ -321,14 +347,17 @@ export function run(userSource: string, options: Partial<Options> = {}): RunResu
 
   // tests run in the same engine, so they see everything the program defined
   const testFrom = eng.msgs.length;
-  if (opts.tests.trim()) eng.run(opts.tests);
-  const testMsgs = eng.msgs.splice(testFrom);
   const tests: TestReport = { passed: 0, failed: 0, results: [] };
+  const record = (ok: boolean, text: string) => {
+    if (ok) tests.passed++; else tests.failed++;
+    tests.results.push({ ok, text });
+  };
+  if (opts.tests.trim() && opts.testsLang === "js") runJsTests(eng, opts.tests, record);
+  else if (opts.tests.trim()) eng.run(opts.tests);
+  const testMsgs = eng.msgs.splice(testFrom);
   for (const m of testMsgs) {
     if (m.level === "comment" || m.level === "warning") continue;
-    const ok = m.level === "happy";
-    if (ok) tests.passed++; else tests.failed++;
-    tests.results.push({ ok, text: messageText(m) });
+    record(m.level === "happy", messageText(m));
   }
 
   const messages = eng.msgs;

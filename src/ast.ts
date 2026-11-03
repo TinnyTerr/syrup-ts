@@ -69,6 +69,14 @@ export interface ExpEquiv {
   b: string;
 }
 
+// `table f` + indented `inputs | outputs` rows: a partial truth table, checked row by row.
+// `_` in outputs means "don't care"; `_` in inputs stands for both 0 and 1.
+export interface ExpTable {
+  k: "expTable";
+  name: string;
+  rows: { ins: string; outs: string }[];
+}
+
 // A value literal, as used in `experiment f(...)`.
 export type ValueLit = number | ValueLit[];
 
@@ -136,7 +144,7 @@ export interface TypeDef {
 }
 
 export type Stmt =
-  | Decl | Def | ExpTruth | ExpEquiv | ExpSim | ExpUnit | ExpForall
+  | Decl | Def | ExpTable | ExpTruth | ExpEquiv | ExpSim | ExpUnit | ExpForall
   | Display | CostStmt | NameStmt | DefinitionStmt | Skip | TypeDef;
 
 // Assigns a per-definition-local index to every `app` node, in a fixed
