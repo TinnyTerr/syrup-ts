@@ -131,6 +131,18 @@ function RegistryDetails({ registry }: { registry: Registry }) {
 function Playground() {
     const [source, setSource] = useState(DEFAULT_SOURCE);
     const [tests, setTests] = useState("");
+    // hidden until F9 is pressed (presets still apply while hidden)
+    const [showPresets, setShowPresets] = useState(false);
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "F9") {
+                e.preventDefault();
+                setShowPresets(s => !s);
+            }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, []);
     // nothing is predefined: presets are off until switched on here
     const [enabled, setEnabled] = useState<string[]>([]);
     const [custom, setCustom] = useState<Record<string, string>>({});
@@ -166,7 +178,7 @@ function Playground() {
                 <fieldset>
                     <div className="boxform">
                         <h3>Syrup Playground</h3>
-                        <details open>
+                        {showPresets && <details open>
                             <summary>Presets ({enabled.length} enabled)</summary>
                             <p>Named bundles of definitions, off until you tick them. Add your own below.</p>
                             <ul>
@@ -193,7 +205,7 @@ function Playground() {
                             <button type="button" onClick={addPreset}>
                                 Add preset
                             </button>
-                        </details>
+                        </details>}
 
                         <details>
                             <summary>
