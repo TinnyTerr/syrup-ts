@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { run } from "../src/index";
 import { BUILTIN_PRESETS } from "../src/prelude";
@@ -131,8 +131,29 @@ function RegistryDetails({ registry }: { registry: Registry }) {
 function Playground() {
     const [source, setSource] = useState(DEFAULT_SOURCE);
     const [tests, setTests] = useState("");
-    const go = (src: string, t: string) => run(src, { format: "html", presets: ["gates"], tests: t });
-    const [result, setResult] = useState(() => go(DEFAULT_SOURCE, ""));
+    // nothing is predefined: presets are off until switched on here
+    const [enabled, setEnabled] = useState<string[]>([]);
+    const [custom, setCustom] = useState<Record<string, string>>({});
+    const [draftName, setDraftName] = useState("");
+    const [draftSrc, setDraftSrc] = useState("");
+    const all: Record<string, string> = { ...BUILTIN_PRESETS, ...custom };
+    const result = useMemo(
+        () => run(source, { format: "html", presets: enabled, presetDefs: custom, tests }),
+        [source, tests, enabled, custom],
+    );
+    const toggle = (n: string) => setEnabled(e => (e.includes(n) ? e.filter(x => x !== n) : [...e, n]));
+    const addPreset = () => {
+        const n = draftName.trim();
+        if (!n || !draftSrc.trim()) return;
+        setCustom(c => ({ ...c, [n]: draftSrc }));
+        setEnabled(e => (e.includes(n) ? e : [...e, n]));
+        setDraftName("");
+        setDraftSrc("");
+    };
+    const removePreset = (n: string) => {
+        setCustom(c => Object.fromEntries(Object.entries(c).filter(([k]) => k !== n)));
+        setEnabled(e => e.filter(x => x !== n));
+    };
 
     return (
         <>
@@ -140,13 +161,39 @@ function Playground() {
             <form
                 onSubmit={e => {
                     e.preventDefault();
-                    setResult(go(source, tests));
                 }}
             >
                 <fieldset>
                     <div className="boxform">
                         <h3>Syrup Playground</h3>
-                        <pre>{BUILTIN_PRESETS.gates!.trim()}</pre>
+                        <details open>
+                            <summary>Presets ({enabled.length} enabled)</summary>
+                            <p>Named bundles of definitions, off until you tick them. Add your own below.</p>
+                            <ul>
+                                {Object.keys(all).map(n => (
+                                    <li key={n}>
+                                        <label>
+                                            <input type="checkbox" checked={enabled.includes(n)} onChange={() => toggle(n)} /> {n}
+                                            {n in custom && n in BUILTIN_PRESETS ? " (overrides builtin)" : n in custom ? "" : " (builtin)"}
+                                        </label>
+                                        {n in custom && (
+                                            <button type="button" onClick={() => removePreset(n)}>
+                                                remove
+                                            </button>
+                                        )}
+                                        <details>
+                                            <summary>source</summary>
+                                            <pre>{all[n]!.trim()}</pre>
+                                        </details>
+                                    </li>
+                                ))}
+                            </ul>
+                            <input placeholder="preset name" value={draftName} onChange={e => setDraftName(e.target.value)} />
+                            <Editor value={draftSrc} onChange={setDraftSrc} />
+                            <button type="button" onClick={addPreset}>
+                                Add preset
+                            </button>
+                        </details>
 
                         <details>
                             <summary>
@@ -176,7 +223,6 @@ function Playground() {
                                 value={tests}
                                 onChange={value => {
                                     setTests(value);
-                                    setResult(go(source, value));
                                 }}
                             />
                             <ul>
@@ -196,7 +242,6 @@ function Playground() {
                                             value={source}
                                             onChange={value => {
                                                 setSource(value);
-                                                setResult(go(value, tests));
                                             }}
                                         />
                                         <br />
