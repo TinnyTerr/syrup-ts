@@ -130,7 +130,7 @@ function RegistryDetails({ registry }: { registry: Registry }) {
 
 function Playground() {
     const [source, setSource] = useState(DEFAULT_SOURCE);
-    const [result, setResult] = useState(() => run(DEFAULT_SOURCE, { format: "html" }));
+    const [result, setResult] = useState(() => run(DEFAULT_SOURCE, { format: "html", presets: ["gates"] }));
 
     return (
         <>
@@ -138,7 +138,7 @@ function Playground() {
             <form
                 onSubmit={e => {
                     e.preventDefault();
-                    setResult(run(source, { format: "html" }));
+                    setResult(run(source, { format: "html", presets: ["gates"] }));
                 }}
             >
                 <fieldset>
@@ -171,7 +171,7 @@ function Playground() {
                                             value={source}
                                             onChange={value => {
                                                 setSource(value);
-                                                setResult(run(value, { format: "html" }));
+                                                setResult(run(value, { format: "html", presets: ["gates"] }));
                                             }}
                                         />
                                         <br />

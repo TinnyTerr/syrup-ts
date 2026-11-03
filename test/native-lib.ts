@@ -20,7 +20,7 @@ export async function cases(): Promise<Case[]> {
     const flagsFile = Bun.file(join(DIR, `${name}.flags`));
     const flags = (await flagsFile.exists()) ? (await flagsFile.text()).split(/\s+/).filter(Boolean) : [];
     // goldens are upstream's output: its plaintext unless --html is given
-    const parsed = parseOptions({ ...defaultOptions, format: "syrup" }, flags);
+    const parsed = parseOptions({ ...defaultOptions, format: "syrup", presets: ["gates"] }, flags);
     if (typeof parsed === "string") throw new Error(`${name}: ${parsed}`);
     out.push({
       name,

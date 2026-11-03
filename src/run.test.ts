@@ -1,5 +1,7 @@
 import { test, expect } from "bun:test";
-import { run } from "./run";
+import { run as run0 } from "./run";
+import type { Options } from "./options";
+const run = (s: string, o: Partial<Options> = {}) => run0(s, { presets: ["gates"], ...o });
 
 test("not/and/or/xor prelude truth tables", () => {
   const { log, errorCount } = run("experiment xor\nexperiment and\nexperiment or\nexperiment not");
@@ -115,4 +117,16 @@ experiment dff2(1;1;0)
   expect(log[1]).toBe(
     ["Simulation for `dff2`:", "  0 {0} 1 -> 0", "  1 {1} 1 -> 1", "  2 {1} 0 -> 1", "  3 {0}"].join("\n")
   );
+});
+
+test("nothing is predefined without presets", () => {
+  const { errorCount } = run0("experiment not");
+  expect(errorCount).toBeGreaterThan(0);
+});
+
+test("custom presets can be defined and enabled", () => {
+  const presetDefs = { inv: "inv(<Bit>) -> <Bit>\ninv(X) = nand(X,X)" };
+  expect(run0("experiment inv", { presetDefs, presets: ["inv"] }).errorCount).toBe(0);
+  expect(run0("experiment inv", { presetDefs }).errorCount).toBeGreaterThan(0);
+  expect(run0("experiment inv", { presets: ["nope"] }).errorCount).toBeGreaterThan(0);
 });

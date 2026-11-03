@@ -8,8 +8,9 @@ Haskell implementation.
 Supports declarations, definitions (with cables, multi-output components,
 `!`/`&`/`|` sugar), and all three experiment forms from the manual: truth
 tables, time-sequence simulation, and behavioural equivalence. `nand`,
-`zero`, `dff`, and `srff` are the primitives; `not`, `and`, `or`, `xor`, and
-`one` are defined from `nand` in Syrup itself (`src/prelude.ts`).
+`zero`, `dff`, and `srff` are the primitives. Nothing else is predefined:
+`not`, `and`, `or`, `xor`, `one` live in the opt-in `gates` preset
+(`src/prelude.ts`), and you can add your own presets (see Presets).
 
 The evaluator is dynamically shaped rather than statically type-checked:
 declared signatures drive experiment generation (arity, cable shapes for
@@ -24,6 +25,19 @@ this implementation's own, not a port of anything.
 bun install
 bun run index.ts path/to/circuit.syrup
 ```
+
+### Presets
+
+Presets are named bundles of definitions that are off until you enable them.
+
+```bash
+syrup --preset gates file.syrup                      # builtin
+syrup --preset-def mine=mine.syrup --preset mine f.syrup   # your own
+syrup --preset gates --no-preset gates f.syrup       # disable again
+syrup --list-presets
+```
+
+Library: `run(src, { presets: ["mine"], presetDefs: { mine: "..." } })`.
 
 ### Output formats and flags
 
@@ -99,7 +113,7 @@ plus `web/demo.html` and deploys the demo to GitHub Pages on pushes to `main`
   equation evaluation, primitives)
 - `src/experiments.ts` — truth tables, time-sequence simulation, bisimulation-based
   equivalence checking
-- `src/prelude.ts` — `not`/`and`/`or`/`xor`/`one`, defined in Syrup itself
+- `src/prelude.ts` — builtin presets (`gates`: `not`/`and`/`or`/`xor`/`one`, defined in Syrup itself)
 - `src/run.ts` — the engine: pairs declarations with definitions, checks them
   (`src/check.ts`), runs statements and collects structured messages
 - `src/doc.ts` — message/Doc model and the plain-text and html renderers

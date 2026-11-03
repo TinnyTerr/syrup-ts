@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { run } from "./src/run";
+import { BUILTIN_PRESETS } from "./src/prelude";
 import { defaultOptions, parseOptions } from "./src/options";
 
 const USAGE = `usage: syrup [options] <file.syrup>
@@ -7,24 +8,46 @@ const USAGE = `usage: syrup [options] <file.syrup>
   --format plain|syrup|html   output style (default plain)
   --syrup                     upstream-style plaintext (ascii-bordered tables)
   --html                      the markup the playground page uses
+  --preset a,b                enable presets (builtin: gates); nothing is predefined by default
+  --no-preset a,b             disable presets again
+  --preset-def name=file      define your own preset from a .syrup file (then enable it with --preset)
+  --list-presets              list the available presets
   -q, --quiet                 hide "is defined" notices
   --source-dot                print Graphviz source for \`display\` instead of rendering`;
 
 const args = process.argv.slice(2);
 const flags: string[] = [];
 let path: string | undefined;
+const presetDefFlags: string[] = [];
+let listPresets = false;
 for (let i = 0; i < args.length; i++) {
   const a = args[i]!;
-  if (a === "--format") flags.push(a, args[++i] ?? "");
+  if (a === "--format" || a === "--preset" || a === "--no-preset") flags.push(a, args[++i] ?? "");
+  else if (a === "--preset-def") presetDefFlags.push(args[++i] ?? "");
+  else if (a.startsWith("--preset-def=")) presetDefFlags.push(a.slice(13));
+  else if (a === "--list-presets") listPresets = true;
   else if (a.startsWith("-")) flags.push(a);
   else path = a;
+}
+const presetDefs: Record<string, string> = {};
+for (const d of presetDefFlags) {
+  const eq = d.indexOf("=");
+  if (eq < 1) {
+    console.error(`syrup: --preset-def wants name=file, got '${d}'`);
+    process.exit(1);
+  }
+  presetDefs[d.slice(0, eq)] = await Bun.file(d.slice(eq + 1)).text();
+}
+if (listPresets) {
+  for (const n of Object.keys({ ...BUILTIN_PRESETS, ...presetDefs })) console.log(n);
+  process.exit(0);
 }
 if (!path) {
   console.error(USAGE);
   process.exit(1);
 }
 
-const opts = parseOptions(defaultOptions, flags);
+const opts = parseOptions({ ...defaultOptions, presetDefs }, flags);
 if (typeof opts === "string") {
   console.error(`syrup: ${opts}\n${USAGE}`);
   process.exit(1);

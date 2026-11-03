@@ -3,7 +3,7 @@ import {
 } from "./parser";
 import { newRegistry, registerDef, RuntimeError, type Registry } from "./eval";
 import { toMermaid } from "./diagram";
-import { PRELUDE } from "./prelude";
+import { BUILTIN_PRESETS } from "./prelude";
 import { defaultOptions, type Options } from "./options";
 import type { Ctx } from "./ctx";
 import { checkDef } from "./check";
@@ -296,11 +296,18 @@ function patText(p: import("./ast").Pat): string {
 export function run(userSource: string, options: Partial<Options> = {}): RunResult {
   const opts: Options = { ...defaultOptions, ...options };
   const eng = new Engine({ ...opts, quiet: false }, false);
-  eng.run(PRELUDE); // discarded: prelude is not user output
+  const unknown: Message[] = [];
+  const all = { ...BUILTIN_PRESETS, ...opts.presetDefs };
+  for (const name of opts.presets) {
+    const src = all[name];
+    if (src === undefined) unknown.push(err(`Unknown preset '${name}' (available: ${Object.keys(all).join(", ") || "none"}).`));
+    else eng.run(src); // discarded: presets are not user output
+  }
   eng.msgs = [];
   eng.errorCount = 0;
   eng.user = true;
   eng.opts = opts;
+  eng.push(...unknown);
   eng.run(userSource);
 
   const messages = eng.msgs;

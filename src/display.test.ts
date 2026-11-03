@@ -1,7 +1,9 @@
 import { test, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { run } from "./run";
+import { run as run0 } from "./run";
+import type { Options } from "./options";
+const run = (s: string, o: Partial<Options> = {}) => run0(s, { presets: ["gates"], ...o });
 import { DotBuilder } from "./dot";
 import { graphicalCell } from "./display";
 import type { Ty } from "./ast";

@@ -9,7 +9,7 @@ and(X,Y) = !nand(X,Y)
 or(<Bit>, <Bit>) -> <Bit>
 or(X,Y) = nand(!X,!Y)
 `;
-const out = (s: string) => run(PRE + s, { format: "syrup", quiet: true }).output;
+const out = (s: string) => run(PRE + s, { format: "syrup", quiet: true, presets: ["gates"] }).output;
 
 test("simplify removes double negation", () => {
   expect(out("f(<Bit>) -> <Bit>\nf(X) = !!!X\nsimplify f")).toBe(
