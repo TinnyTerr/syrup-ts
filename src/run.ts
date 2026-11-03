@@ -26,8 +26,17 @@ export interface RunResult {
   registry: Registry;
   /** structured messages, before any merging of "is defined" notices */
   messages: Message[];
+  /** outcome of `options.tests`: every test experiment, with a verdict */
+  tests: TestReport;
   /** the whole output rendered in `options.format` */
   output: string;
+}
+
+export interface TestReport {
+  passed: number;
+  failed: number;
+  /** one per test, in order */
+  results: { ok: boolean; text: string }[];
 }
 
 const err = (doc: Doc, extra: Partial<Message> = {}): Message => ({ level: "error", doc, ...extra });
@@ -310,6 +319,18 @@ export function run(userSource: string, options: Partial<Options> = {}): RunResu
   eng.push(...unknown);
   eng.run(userSource);
 
+  // tests run in the same engine, so they see everything the program defined
+  const testFrom = eng.msgs.length;
+  if (opts.tests.trim()) eng.run(opts.tests);
+  const testMsgs = eng.msgs.splice(testFrom);
+  const tests: TestReport = { passed: 0, failed: 0, results: [] };
+  for (const m of testMsgs) {
+    if (m.level === "comment" || m.level === "warning") continue;
+    const ok = m.level === "happy";
+    if (ok) tests.passed++; else tests.failed++;
+    tests.results.push({ ok, text: messageText(m) });
+  }
+
   const messages = eng.msgs;
   const log = messages
     .map((m) => (m.legacy !== undefined ? m.legacy : messageText(m)))
@@ -319,7 +340,7 @@ export function run(userSource: string, options: Partial<Options> = {}): RunResu
     opts.format === "html" ? renderMessagesHtml(merged)
     : opts.format === "syrup" ? renderMessagesText(merged) + (merged.length ? "\n" : "")
     : log.join("\n\n");
-  return { log, errorCount: eng.errorCount, registry: eng.reg, messages, output };
+  return { log, errorCount: eng.errorCount, tests, registry: eng.reg, messages, output };
 }
 
 export { toMermaid };

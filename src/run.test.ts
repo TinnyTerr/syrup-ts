@@ -130,3 +130,13 @@ test("custom presets can be defined and enabled", () => {
   expect(run0("experiment inv", { presetDefs }).errorCount).toBeGreaterThan(0);
   expect(run0("experiment inv", { presets: ["nope"] }).errorCount).toBeGreaterThan(0);
 });
+
+test("tests run against the program and are reported", () => {
+  const src = "inv(<Bit>) -> <Bit>\ninv(X) = nand(X,X)";
+  const good = run0(src, { tests: "experiment inv(0) = 1\nexperiment forall X -> inv(inv(X)) = X" });
+  expect(good.tests.passed).toBe(2);
+  expect(good.tests.failed).toBe(0);
+  const bad = run0(src, { tests: "experiment inv(0) = 0" });
+  expect(bad.tests.failed).toBe(1);
+  expect(bad.errorCount).toBeGreaterThan(0);
+});

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { run } from "../src/index";
-import { PRELUDE } from "../src/prelude";
+import { BUILTIN_PRESETS } from "../src/prelude";
 import { messageText } from "../src/doc";
 import type { Component, Registry } from "../src/eval";
 
@@ -130,7 +130,9 @@ function RegistryDetails({ registry }: { registry: Registry }) {
 
 function Playground() {
     const [source, setSource] = useState(DEFAULT_SOURCE);
-    const [result, setResult] = useState(() => run(DEFAULT_SOURCE, { format: "html", presets: ["gates"] }));
+    const [tests, setTests] = useState("");
+    const go = (src: string, t: string) => run(src, { format: "html", presets: ["gates"], tests: t });
+    const [result, setResult] = useState(() => go(DEFAULT_SOURCE, ""));
 
     return (
         <>
@@ -138,13 +140,13 @@ function Playground() {
             <form
                 onSubmit={e => {
                     e.preventDefault();
-                    setResult(run(source, { format: "html", presets: ["gates"] }));
+                    setResult(go(source, tests));
                 }}
             >
                 <fieldset>
                     <div className="boxform">
                         <h3>Syrup Playground</h3>
-                        <pre>{PRELUDE.trim()}</pre>
+                        <pre>{BUILTIN_PRESETS.gates!.trim()}</pre>
 
                         <details>
                             <summary>
@@ -162,6 +164,29 @@ function Playground() {
                                 <p>No diagnostics.</p>
                             )}
                         </details>
+                        <details open={result.tests.results.length > 0}>
+                            <summary>
+                                Tests ({result.tests.passed} passed, {result.tests.failed} failed)
+                            </summary>
+                            <p>
+                                Unit tests, <code>forall</code> properties and <code>f = g</code> experiments, run
+                                against the code below.
+                            </p>
+                            <Editor
+                                value={tests}
+                                onChange={value => {
+                                    setTests(value);
+                                    setResult(go(source, value));
+                                }}
+                            />
+                            <ul>
+                                {result.tests.results.map((t, index) => (
+                                    <li key={index} className={t.ok ? "syrup-happy" : "syrup-error"}>
+                                        {t.text}
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
                         <RegistryDetails registry={result.registry} />
                         <table className="syrup-table">
                             <tbody>
@@ -171,7 +196,7 @@ function Playground() {
                                             value={source}
                                             onChange={value => {
                                                 setSource(value);
-                                                setResult(run(value, { format: "html", presets: ["gates"] }));
+                                                setResult(go(value, tests));
                                             }}
                                         />
                                         <br />

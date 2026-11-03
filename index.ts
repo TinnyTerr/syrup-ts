@@ -11,6 +11,7 @@ const USAGE = `usage: syrup [options] <file.syrup>
   --preset a,b                enable presets (builtin: gates); nothing is predefined by default
   --no-preset a,b             disable presets again
   --preset-def name=file      define your own preset from a .syrup file (then enable it with --preset)
+  --test file                 run a file of tests (unit, forall, f = g experiments) against the program
   --list-presets              list the available presets
   -q, --quiet                 hide "is defined" notices
   --source-dot                print Graphviz source for \`display\` instead of rendering`;
@@ -18,6 +19,7 @@ const USAGE = `usage: syrup [options] <file.syrup>
 const args = process.argv.slice(2);
 const flags: string[] = [];
 let path: string | undefined;
+const testFiles: string[] = [];
 const presetDefFlags: string[] = [];
 let listPresets = false;
 for (let i = 0; i < args.length; i++) {
@@ -25,6 +27,8 @@ for (let i = 0; i < args.length; i++) {
   if (a === "--format" || a === "--preset" || a === "--no-preset") flags.push(a, args[++i] ?? "");
   else if (a === "--preset-def") presetDefFlags.push(args[++i] ?? "");
   else if (a.startsWith("--preset-def=")) presetDefFlags.push(a.slice(13));
+  else if (a === "--test") testFiles.push(args[++i] ?? "");
+  else if (a.startsWith("--test=")) testFiles.push(a.slice(7));
   else if (a === "--list-presets") listPresets = true;
   else if (a.startsWith("-")) flags.push(a);
   else path = a;
@@ -60,8 +64,9 @@ const renderDot = (dot: string): string => {
 };
 if (opts.format === "syrup" && Bun.which("dot")) opts.renderDot = renderDot;
 
+opts.tests = (await Promise.all(testFiles.map((f) => Bun.file(f).text()))).join("\n\n");
 const source = await Bun.file(path).text();
-const { log, errorCount, output } = run(source, opts);
+const { log, errorCount, output, tests } = run(source, opts);
 
 if (opts.format === "plain") {
   for (const block of log) {
@@ -72,4 +77,8 @@ if (opts.format === "plain") {
   console.log(output);
 }
 
+if (testFiles.length) {
+  for (const t of tests.results.filter((t) => !t.ok)) console.error(t.text + "\n");
+  console.error(`tests: ${tests.passed} passed, ${tests.failed} failed`);
+}
 if (errorCount) process.exit(1);

@@ -39,6 +39,18 @@ syrup --list-presets
 
 Library: `run(src, { presets: ["mine"], presetDefs: { mine: "..." } })`.
 
+### Tests
+
+Tests are ordinary experiments (unit tests, `forall` properties, `f = g`)
+kept apart from the program and run against it afterwards.
+
+```bash
+syrup --test tests.syrup circuit.syrup     # prints failures + a summary, exits 1 on failure
+```
+
+Library: `run(src, { tests: "..." }).tests` gives `{ passed, failed, results }`.
+The web playground has a Tests box with a live pass/fail count.
+
 ### Output formats and flags
 
 ```bash
