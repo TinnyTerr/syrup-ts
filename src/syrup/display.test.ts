@@ -10,7 +10,7 @@ import type { Ty } from "./ast";
 import { BIT, cable } from "./ast";
 import type { Value } from "./values";
 
-const NATIVE = join(import.meta.dir, "..", "test", "native");
+const NATIVE = join(import.meta.dir, "..", "..", "test", "native");
 const read = (f: string) => readFileSync(join(NATIVE, f), "latin1");
 const jsonDots = (s: string) =>
   [...s.matchAll(/const dot_(\d+) = ("(?:[^"\\]|\\.)*");/g)].map((m) => JSON.parse(m[2]!) as string);

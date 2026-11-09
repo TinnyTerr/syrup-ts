@@ -1,8 +1,8 @@
 // Shared by native.test.ts and native-report.ts: run one golden case.
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { run } from "../src/run";
-import { parseOptions, defaultOptions } from "../src/options";
+import { run } from "../src/syrup/run";
+import { parseOptions, defaultOptions } from "../src/syrup/options";
 
 export const DIR = join(import.meta.dir, "native");
 

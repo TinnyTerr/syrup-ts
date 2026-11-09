@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { run } from "../src/index";
-import { BUILTIN_PRESETS } from "../src/prelude";
-import { messageText } from "../src/doc";
-import type { Component, Registry } from "../src/eval";
+import { run } from "../src/syrup/index";
+import { BUILTIN_PRESETS } from "../src/syrup/prelude";
+import { messageText } from "../src/syrup/doc";
+import type { Component, Registry } from "../src/syrup/eval";
 
 const DEFAULT_SOURCE = ``;
 

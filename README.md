@@ -10,7 +10,7 @@ Supports declarations, definitions (with cables, multi-output components,
 tables, time-sequence simulation, and behavioural equivalence. `nand`,
 `zero`, `dff`, and `srff` are the primitives. Nothing else is predefined:
 `not`, `and`, `or`, `xor`, `one` live in the opt-in `gates` preset
-(`src/prelude.ts`), and you can add your own presets (see Presets).
+(`src/syrup/prelude.ts`), and you can add your own presets (see Presets).
 
 The evaluator is dynamically shaped rather than statically type-checked:
 declared signatures drive experiment generation (arity, cable shapes for
@@ -67,6 +67,19 @@ test("xor is symmetric", () => assert(row("xor","01") === row("xor","10")));
 
 Library: `run(src, { tests: "...", testsLang: "js" }).tests` gives `{ passed, failed, results }`.
 The web playground's presets, diagnostics, tests and registry panels are all hidden; press F9 to toggle them. The tests box with a live pass/fail count.
+
+### Tiny Machine
+
+The Tiny Machine parser is available from the separate `syrup-ts/tiny`
+entrypoint. Its first format is one line containing four 4-hex-digit memory
+words, a 3-letter operation, a 3-hex-digit operand, and an optional
+comma-delimited input stream:
+
+```ts
+import { parseTinyMachine } from "syrup-ts/tiny";
+
+parseTinyMachine("0000 00af 1234 ffff add 00c,1,2a");
+```
 
 ### Output formats and flags
 
@@ -135,23 +148,23 @@ plus `web/demo.html` and deploys the demo to GitHub Pages on pushes to `main`
 
 ## Layout
 
-- `src/lexer.ts`, `src/parser.ts` — tokenizer and recursive-descent parser
-- `src/ast.ts` — AST types, plus the call-site indexing pass that gives every
+- `src/syrup/lexer.ts`, `src/syrup/parser.ts` — tokenizer and recursive-descent parser
+- `src/syrup/ast.ts` — AST types, plus the call-site indexing pass that gives every
   `dff`/`srff` instantiation a stable identity across simulation steps
-- `src/eval.ts` — the interpreter (registry, pattern binding, demand-driven
+- `src/syrup/eval.ts` — the interpreter (registry, pattern binding, demand-driven
   equation evaluation, primitives)
-- `src/experiments.ts` — truth tables, time-sequence simulation, bisimulation-based
+- `src/syrup/experiments.ts` — truth tables, time-sequence simulation, bisimulation-based
   equivalence checking
-- `src/prelude.ts` — builtin presets (`gates`: `not`/`and`/`or`/`xor`/`one`, defined in Syrup itself)
-- `src/run.ts` — the engine: pairs declarations with definitions, checks them
-  (`src/check.ts`), runs statements and collects structured messages
-- `src/doc.ts` — message/Doc model and the plain-text and html renderers
-- `src/pretty.ts` — pretty printer for types, expressions and circuits
-- `src/exp.ts` — truth tables, simulation, bisimulation, unit and property tests
-- `src/transforms.ts`, `src/normal.ts`, `src/cost.ts` — typing/print/anf/dnf/simplify/cost/definition
-- `src/display.ts`, `src/dot.ts` — `display` (Graphviz source) and 7-segment/braille cells
-- `src/options.ts` — output format and flags
-- `src/index.ts` — the library's public entry point (barrel export)
+- `src/syrup/prelude.ts` — builtin presets (`gates`: `not`/`and`/`or`/`xor`/`one`, defined in Syrup itself)
+- `src/syrup/run.ts` — the engine: pairs declarations with definitions, checks them
+  (`src/syrup/check.ts`), runs statements and collects structured messages
+- `src/syrup/doc.ts` — message/Doc model and the plain-text and html renderers
+- `src/syrup/pretty.ts` — pretty printer for types, expressions and circuits
+- `src/syrup/exp.ts` — truth tables, simulation, bisimulation, unit and property tests
+- `src/syrup/transforms.ts`, `src/syrup/normal.ts`, `src/syrup/cost.ts` — typing/print/anf/dnf/simplify/cost/definition
+- `src/syrup/display.ts`, `src/syrup/dot.ts` — `display` (Graphviz source) and 7-segment/braille cells
+- `src/syrup/options.ts` — output format and flags
+- `src/syrup/index.ts` — the library's public entry point (barrel export)
 - `index.ts` — CLI entry point
 
 ## Editor integrations

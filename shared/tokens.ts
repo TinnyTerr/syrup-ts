@@ -1,11 +1,11 @@
 // Highlighting token list shared by the editor integrations. Regex sources
 // only (no flags, no anchors) so each consumer can wrap them: the VS Code
 // grammar is generated from this (shared/gen-textmate.ts), the Obsidian
-// plugin imports it directly. Mirrors src/lexer.ts and the statement heads
-// in src/parser.ts.
+// plugin imports it directly. Mirrors src/syrup/lexer.ts and the statement heads
+// in src/syrup/parser.ts.
 
 export const KEYWORDS = ["experiment", "where", "display", "type", "print"];
-// primitives (src/eval.ts) and prelude circuits (src/prelude.ts)
+// primitives (src/syrup/eval.ts) and prelude circuits (src/syrup/prelude.ts)
 export const BUILTINS = ["nand", "zero", "dff", "srff", "not", "and", "or", "xor", "one"];
 
 const words = (w: string[]) => `\\b(?:${w.join("|")})\\b`;

@@ -1,5 +1,5 @@
 import { MarkdownRenderer, type MarkdownPostProcessorContext, Plugin, loadPrism } from "obsidian";
-import { run } from "../src/index";
+import { run } from "../src/syrup/index";
 import { askPrismGrammar, defineAskCm5Mode, defineCm5Mode, prismGrammar } from "./highlight";
 
 // fence flavours: plain `syrup` only highlights; `add` feeds the note's shared file;

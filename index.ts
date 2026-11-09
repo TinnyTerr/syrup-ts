@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-import { run } from "./src/run";
-import { BUILTIN_PRESETS } from "./src/prelude";
-import { defaultOptions, parseOptions } from "./src/options";
+import { run } from "./src/syrup/run";
+import { BUILTIN_PRESETS } from "./src/syrup/prelude";
+import { defaultOptions, parseOptions } from "./src/syrup/options";
 
 const USAGE = `usage: syrup [options] <file.syrup>
 
