@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { run } from "./run";
 
 describe("tiny machine execution loop testing", () => {
-    test("test the machine loop with a simple program", () => {
+    test("test for correct output", () => {
         expect(run("0 0 0 0  65F65E65D65C8F70", ["0", "0", "1", "C", "0", "7", "C", "A"])).toBe(
             [
                 `0 0 0 0  65F65E65D65C8F70  GET - 0 -`,
