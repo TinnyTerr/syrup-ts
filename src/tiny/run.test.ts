@@ -47,7 +47,7 @@ describe("tiny machine execution loop testing", () => {
 `4 0 0 C  B6A6563A70F71000  STA 6 - -`,
 `6 0 0 C  B6A656CA70F71000  SCF - - -`,
 `7 0 1 C  B6A656CA70F71000  ADC 7 - -`,
-`9 0 5 7  B6A656CA70F71000  HLT - - -`,
+`9 0 5 7  B6A656CA70F71000  HLT - - -`
             ].join("\n")
         )
     })
@@ -65,4 +65,4 @@ describe("tiny machine execution loop testing", () => {
         expect(out).not.toContain("Infinite")
     })
 })
-`,
+
