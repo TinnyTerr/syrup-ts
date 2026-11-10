@@ -1,6 +1,35 @@
+import { parseTinyMachine } from "./parser";
+
 export function run(
-	_source: string,
-	_input: string | string[] | number[],
+    source: string,
+    _input: string | string[] | number[],
 ): string {
-	return "";
+    // TODO: add object based output, to better display the output, and to allow for better testing
+    const obj = parseTinyMachine(source);
+
+    return "";
 }
+
+/**
+ * This function completes a fetch-execute cycle of the Tiny Machine, and returns the new state of the machine.
+ * When editing as the string representation, the path is:
+ * - Either start with the initial state of the machine, or increase the instruction pointer
+ * - Read instruction pointer
+ * - Execute the instruction
+ * - Return the CURRENT state of the machine
+ * - The state of the machine is then observed as being changed on the NEXT step, for example
+ * ```
+ * 0 0 0 5  0000000000000000  STA 0 - - // pretend theres a STA instruction at 0, and the 
+ * 1 8 0 5  5000000000000000  HLT - - - // accumulator is this shows that STA modifies the 
+ *                                      // memory, but it is only visible on the next step, 
+ *                                      // when the instruction pointer is incremented to 1, 
+ *                                      // and the HLT instruction is executed
+ *                                      // it is 1805, 8 represents the halt flag from HLT
+ * ```
+ * 
+ * This function takes in the flags of the previous step, 
+ * outputs the OPR & ? ! of the current step, 
+ * and shows the state of the machine of the current step.
+ */
+
+function machineLoop(condition: TinyMachineProgram, inputs: string[]): { condition: TinyMachineProgram, }

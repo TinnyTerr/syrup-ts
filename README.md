@@ -60,7 +60,7 @@ table xor                 # syrup
 ```
 
 ```js
-table("xor", { "01": "1", 11: "0" }); // or [["01","1"], ...]
+table("xor", { "01": "1", 3: "0" }); // or [["01","1"], ...]
 row("xor", "10"); // -> "1"
 test("xor is symmetric", () => assert(row("xor", "01") === row("xor", "10")));
 ```
@@ -75,17 +75,18 @@ entrypoint. Its first format is one line containing four 4-hex-digit memory
 words, a 3-letter operation, a 3-hex-digit operand, and an optional
 comma-delimited input stream:
 
-```ts
+````ts
 import { parseTinyMachine } from "syrup-ts/tiny";
 
-parseTinyMachine("0000 00af 1234 ffff add 00c,1,2a");
+// incorrect code removed
+// TODO: redo explaination
 ```
 
 ### Output formats and flags
 
 ```bash
 bun run index.ts [--format plain|syrup|html] [-q] [--source-dot] file.syrup
-```
+````
 
 - `plain` (default) — compact plaintext, unchanged.
 - `--syrup` — upstream's plaintext: ASCII-bordered tables, grouped
