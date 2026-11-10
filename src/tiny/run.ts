@@ -20,173 +20,126 @@ export function run(
 			: _input.map((v) => v.toString(16).toUpperCase())
 		: [_input];
 
-	let previousCondition: TinyMachineProgram = obj;
-	let output = "";
+	const state = obj;
+	const lines: string[] = [];
 	while (true) {
+		// the row shows the state *before* this instruction runs
+		const before = structuredClone(state);
 		try {
-			const { condition, operands } = machineLoop(obj, inputs);
+			const operands = machineLoop(state, inputs);
+			lines.push(stringifyStep(before, operands));
 
-			console.log("previousCondition", previousCondition, operands);
-
-			output += `${stringifyStep(previousCondition, operands)}\n`;
-
-			if (condition.registers.fr.hf) {
-				break;
-			}
-
-			previousCondition = condition;
-
-			hasOperand(operands.code)
-				? condition.registers.ip++ && condition.registers.ip++
-				: condition.registers.ip++;
+			if (state.registers.fr.hf) break;
 		} catch (e) {
 			if (e instanceof TinyMachineRuntimeError) {
-				output += `Runtime Error: ${e.message}\n`;
+				lines.push(stringifyStep(before));
+				lines.push(`Runtime Error: ${e.message}`);
 				break;
-			} else {
-				throw e;
 			}
+			throw e;
 		}
 	}
 
-	return output;
+	return lines.join("\n");
 }
 
+type StepInfo = { code: Instructions; opr?: number; in?: number; out?: number };
+
 /**
- * This function completes a fetch-execute cycle of the Tiny Machine, and returns the new state of the machine.
- * When editing as the string representation, the path is:
- * - Either start with the initial state of the machine, or increase the instruction pointer
- * - Read instruction pointer
- * - Execute the instruction
- * - Return the CURRENT state of the machine
- * - The state of the machine is then observed as being changed on the NEXT step, for example
- * ```
- * 0 0 0 5  0000000000000000  STA 0 - - // pretend theres a STA instruction at 0, and the
- * 1 8 0 5  5000000000000000  HLT - - - // accumulator is this shows that STA modifies the
- *                                      // memory, but it is only visible on the next step,
- *                                      // when the instruction pointer is incremented to 1,
- *                                      // and the HLT instruction is executed
- *                                      // it is 1805, 8 represents the halt flag from HLT
- * ```
+ * Runs one fetch-execute cycle, mutating `m`, and returns what the executed
+ * instruction looked like (opcode, operand, input read, output written).
  *
- * This function takes in the flags of the previous step,
- * outputs the OPR & ? ! of the current step,
- * and shows the state of the machine of the current step.
- *
- * @param condition The previous state of the machine
- * @param inputs The inputs to the machine
- * @returns The new state of the machine
+ * The trace row for a step is printed from the state *before* this runs, so
+ * effects (e.g. STA changing memory) show up on the next row.
  */
-
-function machineLoop(
-	condition: TinyMachineProgram,
-	inputs: string[],
-): {
-	condition: TinyMachineProgram;
-	operands: { code: Instructions; opr?: number; in?: number; out?: number };
-} {
-	const instruction =
-		condition.memory[memoryLocation(condition.registers.ip)] ?? 0;
-	const operand = hasOperand(instruction)
-		? condition.memory[memoryLocation(condition.registers.ip + 1)]
+function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
+	const r = m.registers;
+	const ip = memoryLocation(r.ip);
+	const code = (m.memory[ip] ?? 0) as Instructions;
+	const opr = hasOperand(code)
+		? (m.memory[memoryLocation(ip + 1)] ?? 0)
 		: undefined;
+	const info: StepInfo = { code, opr };
 
-	// @ts-expect-error this is fixed later
-	const ret: {
-		condition: TinyMachineProgram;
-		operands: { code: Instructions; opr?: number; in?: number; out?: number };
-	} = {
-		operands: {
-			code: instruction as Instructions,
-			opr: operand,
-		},
-	};
+	let nextIp = memoryLocation(ip + (opr === undefined ? 1 : 2));
+	const mem = (a: number) => m.memory[memoryLocation(a)] ?? 0;
 
-	switch (instruction) {
-		case Instructions.HLT: // HLT
-			condition.registers.fr.hf = true;
+	switch (code) {
+		case Instructions.HLT:
+			r.fr.hf = true;
 			break;
-		case Instructions.JMP: // JMP
-			condition.registers.ip = operand ?? 0;
+		case Instructions.JMP:
+			nextIp = memoryLocation(opr ?? 0);
 			break;
-		case Instructions.JZE: // JZE
-			if (condition.registers.fr.zf) {
-				condition.registers.ip = operand ?? 0;
-			}
+		case Instructions.JZE:
+			if (r.fr.zf) nextIp = memoryLocation(opr ?? 0);
 			break;
-		case Instructions.JNZ: // JNZ
-			if (!condition.registers.fr.zf) {
-				condition.registers.ip = operand ?? 0;
-			}
+		case Instructions.JNZ:
+			if (!r.fr.zf) nextIp = memoryLocation(opr ?? 0);
 			break;
-		case Instructions.LDA: // LDA
-			condition.registers.ac =
-				condition.memory[memoryLocation(operand ?? 0)] ?? 0;
+		case Instructions.LDA:
+			r.ac = mem(opr ?? 0);
 			break;
-		case Instructions.STA: // STA
-			condition.memory[memoryLocation(operand ?? 0)] = condition.registers.ac;
+		case Instructions.STA:
+			m.memory[memoryLocation(opr ?? 0)] = r.ac;
 			break;
-		case Instructions.GET: // GET
-			if (inputs.length > 0) {
-				const input = inputs.shift();
-				condition.registers.ac = Number(`0x${input}`);
-			} else throw new TinyMachineRuntimeError("Starved of inputs");
-			break;
-		case Instructions.PUT: // PUT
-			ret.operands.out = condition.registers.ac;
-			break;
-		case Instructions.ROL: // ROL
-			condition.registers.ac =
-				((condition.registers.ac << 1) | (condition.registers.ac >> 3)) & 0x0f;
-			break;
-		case Instructions.ROR: // ROR
-			condition.registers.ac =
-				((condition.registers.ac >> 1) | (condition.registers.ac << 3)) & 0x0f;
-			break;
-		case Instructions.ADC: {
-			// ADC
-			const sum =
-				condition.registers.ac +
-				(condition.memory[memoryLocation(operand ?? 0)] ?? 0) +
-				(condition.registers.fr.cf ? 1 : 0);
-			condition.registers.fr.cf = sum > 0x0f;
-			condition.registers.ac = sum & 0x0f;
+		case Instructions.GET: {
+			const input = inputs.shift();
+			if (input === undefined) throw new TinyMachineRuntimeError("Starved of inputs");
+			r.ac = Number(`0x${input}`) & 0x0f;
+			info.in = r.ac;
 			break;
 		}
-		case Instructions.CCF: // CCF
-			condition.registers.fr.cf = false;
+		case Instructions.PUT:
+			info.out = r.ac;
 			break;
-		case Instructions.SCF: // SCF
-			condition.registers.fr.cf = true;
+		case Instructions.ROL:
+			r.ac = ((r.ac << 1) | (r.ac >> 3)) & 0x0f;
 			break;
-		case Instructions.DEL: // DEL
-			condition.registers.li--;
+		case Instructions.ROR:
+			r.ac = ((r.ac >> 1) | (r.ac << 3)) & 0x0f;
 			break;
-		case Instructions.LDL: // LDL
-			condition.registers.li = operand ?? 0;
+		case Instructions.ADC: {
+			const a = r.ac;
+			const b = mem(opr ?? 0);
+			const sum = a + b + (r.fr.cf ? 1 : 0);
+			const res = sum & 0x0f;
+			r.fr.cf = sum > 0x0f;
+			// signed overflow: operands share a sign the result doesn't
+			r.fr.of = ((a ^ res) & (b ^ res) & 0x08) !== 0;
+			r.ac = res;
 			break;
-		case Instructions.FLA: // FLA
-			condition.registers.ac = 16 - condition.registers.ac;
+		}
+		case Instructions.CCF:
+			r.fr.cf = false;
+			break;
+		case Instructions.SCF:
+			r.fr.cf = true;
+			break;
+		case Instructions.DEL:
+			r.li = (r.li - 1) & 0x0f;
+			break;
+		case Instructions.LDL:
+			r.li = opr ?? 0;
+			break;
+		case Instructions.FLA:
+			r.ac = (16 - r.ac) & 0x0f;
+			break;
 	}
 
-	if (condition.registers.ac === 0) {
-		condition.registers.fr.zf = true;
-	} else {
-		condition.registers.fr.zf = false;
-	}
+	r.fr.zf = r.ac === 0;
+	if (!r.fr.hf) r.ip = nextIp;
 
-	ret.condition = condition;
-
-	return ret;
+	return info;
 }
 
 function stringifyStep(
 	condition: TinyMachineProgram,
-	operands?: { code: Instructions; opr?: number; in?: number; out?: number },
+	operands?: StepInfo,
 ): string {
 	return `${condition.registers.ip.toString(16).toUpperCase()} ${condition.registers.li.toString(16).toUpperCase()} ${Number(
 		`0b${condition.registers.fr.hf ? 1 : 0}${condition.registers.fr.of ? 1 : 0}${condition.registers.fr.zf ? 1 : 0}${condition.registers.fr.cf ? 1 : 0}`,
 	)
 		.toString(16)
-		.toUpperCase()} ${condition.registers.ac.toString(16).toUpperCase()}   ${condition.memory.map((v) => v.toString(16).toUpperCase()).join("")}  ${Instructions[operands?.code ?? 0]} ${operands?.opr !== undefined ? operands.opr.toString(16).toUpperCase() : "-"} ${operands?.in !== undefined ? operands.in.toString(16).toUpperCase() : "-"} ${operands?.out !== undefined ? operands.out.toString(16).toUpperCase() : "-"}`.trim();
+		.toUpperCase()} ${condition.registers.ac.toString(16).toUpperCase()}  ${condition.memory.map((v) => v.toString(16).toUpperCase()).join("")}  ${Instructions[operands?.code ?? 0]} ${operands?.opr !== undefined ? operands.opr.toString(16).toUpperCase() : "-"} ${operands?.in !== undefined ? operands.in.toString(16).toUpperCase() : "-"} ${operands?.out !== undefined ? operands.out.toString(16).toUpperCase() : "-"}`.trim();
 }

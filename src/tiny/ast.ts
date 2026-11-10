@@ -20,8 +20,8 @@ export interface Flags {
 }
 
 export enum Instructions {
-	JMP,
 	HLT,
+	JMP,
 	JZE,
 	JNZ,
 	LDA,
@@ -40,9 +40,9 @@ export enum Instructions {
 
 export function hasOperand(instruction: Instructions): boolean {
 	return (
-		(instruction > 0 && instruction < 5) ||
-		instruction === 10 ||
-		instruction === 15
+		(instruction >= Instructions.JMP && instruction <= Instructions.STA) ||
+		instruction === Instructions.ADC ||
+		instruction === Instructions.LDL
 	);
 }
 

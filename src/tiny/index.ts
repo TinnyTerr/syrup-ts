@@ -1,2 +1,3 @@
 export type { TinyMachineProgram } from "./ast";
-export { parseTinyMachine, TinyMachineParseError } from "./parser";
+export { TinyMachineParseError } from "./ast";
+export { parseTinyMachine } from "./parser";
