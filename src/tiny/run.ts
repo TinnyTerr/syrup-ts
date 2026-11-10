@@ -22,7 +22,18 @@ export function run(
 
 	const state = obj;
 	const lines: string[] = [];
+	// The machine is deterministic and finite, so seeing the exact same state
+	// again with the same inputs left means it will repeat forever. A GET inside
+	// the loop eats an input, so that state never repeats (it either escapes or
+	// starves, which is a runtime error anyway).
+	const seen = new Set<string>();
 	while (true) {
+		const key = `${inputs.length}|${JSON.stringify(state)}`;
+		if (seen.has(key)) {
+			lines.push("Runtime Error: Infinite loop detected");
+			break;
+		}
+		seen.add(key);
 		// the row shows the state *before* this instruction runs
 		const before = structuredClone(state);
 		try {

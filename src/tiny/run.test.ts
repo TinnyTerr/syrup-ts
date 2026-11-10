@@ -29,5 +29,17 @@ describe("tiny machine execution loop testing", () => {
             ].join("\n")
         )
     })
-})
 
+    test("detects a loop with no way out", () => {
+        // JMP 0 forever
+        const out = run("0 0 0 0  1000000000000000", [])
+        expect(out.split("\n").at(-1)).toBe("Runtime Error: Infinite loop detected")
+    })
+
+    test("a loop containing GET is not flagged", () => {
+        // GET, JMP 0: runs until inputs are gone
+        const out = run("0 0 0 0  6100000000000000", ["1", "1"])
+        expect(out).toContain("Starved of inputs")
+        expect(out).not.toContain("Infinite")
+    })
+})
