@@ -90,14 +90,17 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 			break;
 		case Instructions.LDA:
 			r.ac = mem(opr ?? 0);
+			r.fr.zf = r.ac === 0;
 			break;
 		case Instructions.STA:
 			m.memory[memoryLocation(opr ?? 0)] = r.ac;
 			break;
 		case Instructions.GET: {
 			const input = inputs.shift();
-			if (input === undefined) throw new TinyMachineRuntimeError("Starved of inputs");
+			if (input === undefined)
+				throw new TinyMachineRuntimeError("Starved of inputs");
 			r.ac = Number(`0x${input}`) & 0x0f;
+			r.fr.zf = r.ac === 0;
 			info.in = r.ac;
 			break;
 		}
@@ -106,9 +109,11 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 			break;
 		case Instructions.ROL:
 			r.ac = ((r.ac << 1) | (r.ac >> 3)) & 0x0f;
+			r.fr.zf = r.ac === 0;
 			break;
 		case Instructions.ROR:
 			r.ac = ((r.ac >> 1) | (r.ac << 3)) & 0x0f;
+			r.fr.zf = r.ac === 0;
 			break;
 		case Instructions.ADC: {
 			const a = r.ac;
@@ -119,6 +124,7 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 			// signed overflow: operands share a sign the result doesn't
 			r.fr.of = ((a ^ res) & (b ^ res) & 0x08) !== 0;
 			r.ac = res;
+			r.fr.zf = r.ac === 0;
 			break;
 		}
 		case Instructions.CCF:
@@ -134,11 +140,11 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 			r.li = opr ?? 0;
 			break;
 		case Instructions.FLA:
-			r.ac = (16 - r.ac) & 0x0f;
+			r.ac = (15 - r.ac) & 0x0f;
+			r.fr.zf = r.ac === 0;
 			break;
 	}
 
-	r.fr.zf = r.ac === 0;
 	if (!r.fr.hf) r.ip = nextIp;
 
 	return info;

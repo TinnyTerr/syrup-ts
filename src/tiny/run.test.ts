@@ -64,7 +64,7 @@ describe("tiny machine execution loop testing", () => {
 		);
 	});
 
-	test("test 2 - flag and register operations", () => {
+	test("test 3 - jump operations", () => {
 		expect(run("0 0 0 0  B6A6564A70F71000", ["F", "9"])).toBe(
 			[
 				`0 0 0 0  B6A6564A70F71000  CCF - - -`,
