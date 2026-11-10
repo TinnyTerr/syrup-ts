@@ -30,6 +30,10 @@ export function run(
  * This function takes in the flags of the previous step, 
  * outputs the OPR & ? ! of the current step, 
  * and shows the state of the machine of the current step.
+ * 
+ * @param condition The previous state of the machine
+ * @param inputs The inputs to the machine
+ * @returns The new state of the machine
  */
 
 function machineLoop(condition: TinyMachineProgram, inputs: string[]): { condition: TinyMachineProgram, }
