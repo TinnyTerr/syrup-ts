@@ -1,5 +1,10 @@
 {
-  "extends": "../tsconfig.json",
-  "compilerOptions": { "types": [], "lib": ["ESNext", "DOM"] },
-  "include": ["main.ts", "highlight.ts", "../src/syrup/index.ts", "../shared/tokens.ts"]
+	"extends": "../tsconfig.json",
+	"compilerOptions": { "types": [], "lib": ["ESNext", "DOM"] },
+	"include": [
+		"main.ts",
+		"highlight.ts",
+		"../src/syrup/index.ts",
+		"../shared/tokens.ts"
+	]
 }

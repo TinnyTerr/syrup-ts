@@ -6,17 +6,27 @@
 
 export const KEYWORDS = ["experiment", "where", "display", "type", "print"];
 // primitives (src/syrup/eval.ts) and prelude circuits (src/syrup/prelude.ts)
-export const BUILTINS = ["nand", "zero", "dff", "srff", "not", "and", "or", "xor", "one"];
+export const BUILTINS = [
+	"nand",
+	"zero",
+	"dff",
+	"srff",
+	"not",
+	"and",
+	"or",
+	"xor",
+	"one",
+];
 
 const words = (w: string[]) => `\\b(?:${w.join("|")})\\b`;
 
 export const RULES = {
-  comment: "--.*",
-  type: "<[A-Za-z][A-Za-z0-9]*>",
-  keyword: words(KEYWORDS),
-  builtin: words(BUILTINS),
-  func: "\\b[A-Za-z][A-Za-z0-9]*(?=\\()",
-  number: "\\b[0-9]+\\b",
-  operator: "->|[=!&|@]",
-  punctuation: "[()\\[\\],]",
+	comment: "--.*",
+	type: "<[A-Za-z][A-Za-z0-9]*>",
+	keyword: words(KEYWORDS),
+	builtin: words(BUILTINS),
+	func: "\\b[A-Za-z][A-Za-z0-9]*(?=\\()",
+	number: "\\b[0-9]+\\b",
+	operator: "->|[=!&|@]",
+	punctuation: "[()\\[\\],]",
 } as const;

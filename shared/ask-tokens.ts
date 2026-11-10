@@ -11,15 +11,28 @@ export const ASK_BLOCK_CLOSE = "-\\}";
 const words = (w: string[]) => `\\b(?:${w.join("|")})\\b`;
 
 export const ASK_RULES = {
-  comment: "--.*",
-  string: '"[^"]*"',
-  success: words(["proven", "defined", "parsed"]),
-  primary: `\\?|${words(["prove", "define", "parse"])}`,
-  assumption: words(["given"]),
-  keyword:
-    "::|->|=|\\||" +
-    words(["data", "grammar", "prop", "where", "from", "by", "inductively", "tested", "test", "under", "infixl", "infixr"]),
-  nonterminal: "<[A-Za-z][A-Za-z_0-9]+>",
-  constructor: "\\b[A-Z][A-Za-z0-9_']*",
-  punctuation: "[()\\[\\]]",
+	comment: "--.*",
+	string: '"[^"]*"',
+	success: words(["proven", "defined", "parsed"]),
+	primary: `\\?|${words(["prove", "define", "parse"])}`,
+	assumption: words(["given"]),
+	keyword:
+		"::|->|=|\\||" +
+		words([
+			"data",
+			"grammar",
+			"prop",
+			"where",
+			"from",
+			"by",
+			"inductively",
+			"tested",
+			"test",
+			"under",
+			"infixl",
+			"infixr",
+		]),
+	nonterminal: "<[A-Za-z][A-Za-z_0-9]+>",
+	constructor: "\\b[A-Z][A-Za-z0-9_']*",
+	punctuation: "[()\\[\\]]",
 } as const;

@@ -4,94 +4,123 @@
 // about layout/indentation).
 
 export type TokKind =
-  | "name" | "num" | "wild" | "tyname"
-  | "arrow" | "lparen" | "rparen" | "lbrack" | "rbrack"
-  | "comma" | "eq" | "bang" | "amp" | "pipe" | "at"
-  | "where" | "experiment" | "hole" | "eof";
+	| "name"
+	| "num"
+	| "wild"
+	| "tyname"
+	| "arrow"
+	| "lparen"
+	| "rparen"
+	| "lbrack"
+	| "rbrack"
+	| "comma"
+	| "eq"
+	| "bang"
+	| "amp"
+	| "pipe"
+	| "at"
+	| "where"
+	| "experiment"
+	| "hole"
+	| "eof";
 
 export interface Tok {
-  kind: TokKind;
-  value: string;
-  pos: number;
+	kind: TokKind;
+	value: string;
+	pos: number;
 }
 
 const KEYWORDS: Record<string, TokKind> = {
-  where: "where",
-  experiment: "experiment",
+	where: "where",
+	experiment: "experiment",
 };
 
 export class LexError extends Error {
-  constructor(message: string, public pos = 0) {
-    super(message);
-  }
+	constructor(
+		message: string,
+		public pos = 0,
+	) {
+		super(message);
+	}
 }
 
 export function lex(src: string): Tok[] {
-  const toks: Tok[] = [];
-  let i = 0;
-  const n = src.length;
-  while (i < n) {
-    const c = src[i]!;
-    if (c === " " || c === "\t" || c === "\n" || c === "\r") { i++; continue; }
-    if (c === "-" && src[i + 1] === "-") {
-      while (i < n && src[i] !== "\n") i++;
-      continue;
-    }
-    const start = i;
-    if (/[A-Za-z]/.test(c)) {
-      i++;
-      while (i < n && /[A-Za-z0-9]/.test(src[i]!)) i++;
-      const word = src.slice(start, i);
-      toks.push({ kind: KEYWORDS[word] ?? "name", value: word, pos: start });
-      continue;
-    }
-    if (c === "_") {
-      i++;
-      toks.push({ kind: "wild", value: "_", pos: start });
-      continue;
-    }
-    if (/[0-9]/.test(c)) {
-      i++;
-      while (i < n && /[0-9]/.test(src[i]!)) i++;
-      const word = src.slice(start, i);
-      if (word !== "0" && word !== "1") {
-        throw new LexError(`invalid numeral '${word}' at ${start}`, start);
-      }
-      toks.push({ kind: "num", value: word, pos: start });
-      continue;
-    }
-    if (c === "?") {
-      i++;
-      while (i < n && /[A-Za-z0-9]/.test(src[i]!)) i++;
-      toks.push({ kind: "hole", value: src.slice(start + 1, i), pos: start });
-      continue;
-    }
-    if (c === "<") {
-      // A type name, e.g. <Bit> or <Bit2>; the token's value is the bare
-      // name (no angle brackets) so the parser can look it up as an alias.
-      const m = /^<([A-Za-z0-9][A-Za-z0-9]*)>/.exec(src.slice(i));
-      if (!m) throw new LexError(`expected a type name like <Bit> at ${i}`);
-      i += m[0].length;
-      toks.push({ kind: "tyname", value: m[1]!, pos: start });
-      continue;
-    }
-    if (c === "-" && src[i + 1] === ">") {
-      i += 2;
-      toks.push({ kind: "arrow", value: "->", pos: start });
-      continue;
-    }
-    const single: Record<string, TokKind> = {
-      "(": "lparen", ")": "rparen", "[": "lbrack", "]": "rbrack",
-      ",": "comma", "=": "eq", "!": "bang", "&": "amp", "|": "pipe", "@": "at",
-    };
-    const singleKind = single[c];
-    if (singleKind) {
-      i++;
-      toks.push({ kind: singleKind, value: c, pos: start });
-      continue;
-    }
-    throw new LexError(`unexpected character '${c}' at ${i}`, i);
-  }
-  toks.push({ kind: "eof", value: "", pos: n });
-  return toks;
+	const toks: Tok[] = [];
+	let i = 0;
+	const n = src.length;
+	while (i < n) {
+		const c = src[i]!;
+		if (c === " " || c === "\t" || c === "\n" || c === "\r") {
+			i++;
+			continue;
+		}
+		if (c === "-" && src[i + 1] === "-") {
+			while (i < n && src[i] !== "\n") i++;
+			continue;
+		}
+		const start = i;
+		if (/[A-Za-z]/.test(c)) {
+			i++;
+			while (i < n && /[A-Za-z0-9]/.test(src[i]!)) i++;
+			const word = src.slice(start, i);
+			toks.push({ kind: KEYWORDS[word] ?? "name", value: word, pos: start });
+			continue;
+		}
+		if (c === "_") {
+			i++;
+			toks.push({ kind: "wild", value: "_", pos: start });
+			continue;
+		}
+		if (/[0-9]/.test(c)) {
+			i++;
+			while (i < n && /[0-9]/.test(src[i]!)) i++;
+			const word = src.slice(start, i);
+			if (word !== "0" && word !== "1") {
+				throw new LexError(`invalid numeral '${word}' at ${start}`, start);
+			}
+			toks.push({ kind: "num", value: word, pos: start });
+			continue;
+		}
+		if (c === "?") {
+			i++;
+			while (i < n && /[A-Za-z0-9]/.test(src[i]!)) i++;
+			toks.push({ kind: "hole", value: src.slice(start + 1, i), pos: start });
+			continue;
+		}
+		if (c === "<") {
+			// A type name, e.g. <Bit> or <Bit2>; the token's value is the bare
+			// name (no angle brackets) so the parser can look it up as an alias.
+			const m = /^<([A-Za-z0-9][A-Za-z0-9]*)>/.exec(src.slice(i));
+			if (!m) throw new LexError(`expected a type name like <Bit> at ${i}`);
+			i += m[0].length;
+			toks.push({ kind: "tyname", value: m[1]!, pos: start });
+			continue;
+		}
+		if (c === "-" && src[i + 1] === ">") {
+			i += 2;
+			toks.push({ kind: "arrow", value: "->", pos: start });
+			continue;
+		}
+		const single: Record<string, TokKind> = {
+			"(": "lparen",
+			")": "rparen",
+			"[": "lbrack",
+			"]": "rbrack",
+			",": "comma",
+			"=": "eq",
+			"!": "bang",
+			"&": "amp",
+			"|": "pipe",
+			"@": "at",
+		};
+		const singleKind = single[c];
+		if (singleKind) {
+			i++;
+			toks.push({ kind: singleKind, value: c, pos: start });
+			continue;
+		}
+		throw new LexError(`unexpected character '${c}' at ${i}`, i);
+	}
+	toks.push({ kind: "eof", value: "", pos: n });
+	return toks;
 }

@@ -9,7 +9,7 @@ on:
         required: false
         default: ""
       publish_npm:
-        description: "Also npm publish (needs NPM_TOKEN secret and \"private\" removed from package.json)"
+        description: 'Also npm publish (needs NPM_TOKEN secret and "private" removed from package.json)'
         type: boolean
         default: false
 

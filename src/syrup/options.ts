@@ -1,52 +1,62 @@
 export type Format =
-  | "plain" // the CLI's default, compact plaintext
-  | "syrup" // upstream's plaintext (ascii-bordered tables, grouped notices)
-  | "html"; // the markup the original playground page uses
+	| "plain" // the CLI's default, compact plaintext
+	| "syrup" // upstream's plaintext (ascii-bordered tables, grouped notices)
+	| "html"; // the markup the original playground page uses
 
 export interface Options {
-  format: Format;
-  /** names of the presets to load before the program (none by default) */
-  presets: string[];
-  /** extra presets you define yourself: name -> Syrup source (may shadow builtin ones) */
-  presetDefs: Record<string, string>;
-  /** test source (unit tests, `forall` properties, `experiment f = g`) run against the program after it; results land in `RunResult.tests` */
-  tests: string;
-  /** language of `tests`: Syrup experiments (and `table` blocks), or a JS snippet using `table`, `row`, `test`, `assert` */
-  testsLang: "syrup" | "js";
-  /** hide "is defined" notices */
-  quiet: boolean;
-  /** with html output, print Graphviz source for `display` instead of rendering it */
-  sourceDot: boolean;
-  /** turns Graphviz source into svg for the plaintext formats (the CLI wires in `dot`); without it they print the source */
-  renderDot?: (dot: string) => string;
+	format: Format;
+	/** names of the presets to load before the program (none by default) */
+	presets: string[];
+	/** extra presets you define yourself: name -> Syrup source (may shadow builtin ones) */
+	presetDefs: Record<string, string>;
+	/** test source (unit tests, `forall` properties, `experiment f = g`) run against the program after it; results land in `RunResult.tests` */
+	tests: string;
+	/** language of `tests`: Syrup experiments (and `table` blocks), or a JS snippet using `table`, `row`, `test`, `assert` */
+	testsLang: "syrup" | "js";
+	/** hide "is defined" notices */
+	quiet: boolean;
+	/** with html output, print Graphviz source for `display` instead of rendering it */
+	sourceDot: boolean;
+	/** turns Graphviz source into svg for the plaintext formats (the CLI wires in `dot`); without it they print the source */
+	renderDot?: (dot: string) => string;
 }
 
-export const defaultOptions: Options = { format: "plain", presets: [], presetDefs: {}, tests: "", testsLang: "syrup", quiet: false, sourceDot: false };
+export const defaultOptions: Options = {
+	format: "plain",
+	presets: [],
+	presetDefs: {},
+	tests: "",
+	testsLang: "syrup",
+	quiet: false,
+	sourceDot: false,
+};
 
 /** Parse upstream-style flags (`--html`, `-q`, `--source-dot`, `--format X`). */
 export function parseOptions(base: Options, flags: string[]): Options | string {
-  const o = { ...base };
-  for (let i = 0; i < flags.length; i++) {
-    const f = flags[i]!;
-    if (f === "--html") o.format = "html";
-    else if (f === "--plain") o.format = "plain";
-    else if (f === "--syrup" || f === "--text") o.format = "syrup";
-    else if (f === "--preset" || f.startsWith("--preset=")) {
-      const v = f.includes("=") ? f.slice(f.indexOf("=") + 1) : flags[++i];
-      if (!v) return "--preset needs a name";
-      for (const n of v.split(",").filter(Boolean)) if (!o.presets.includes(n)) o.presets = [...o.presets, n];
-    } else if (f === "--no-preset" || f.startsWith("--no-preset=")) {
-      const v = f.includes("=") ? f.slice(f.indexOf("=") + 1) : flags[++i];
-      if (!v) return "--no-preset needs a name";
-      const off = v.split(",");
-      o.presets = o.presets.filter((n) => !off.includes(n));
-    } else if (f === "-q" || f === "--quiet") o.quiet = true;
-    else if (f === "--source-dot") o.sourceDot = true;
-    else if (f === "--format" || f.startsWith("--format=")) {
-      const v = f.includes("=") ? f.slice(f.indexOf("=") + 1) : flags[++i];
-      if (v !== "plain" && v !== "syrup" && v !== "html") return `unknown format '${v}' (plain, syrup, html)`;
-      o.format = v;
-    } else return `unknown option '${f}'`;
-  }
-  return o;
+	const o = { ...base };
+	for (let i = 0; i < flags.length; i++) {
+		const f = flags[i]!;
+		if (f === "--html") o.format = "html";
+		else if (f === "--plain") o.format = "plain";
+		else if (f === "--syrup" || f === "--text") o.format = "syrup";
+		else if (f === "--preset" || f.startsWith("--preset=")) {
+			const v = f.includes("=") ? f.slice(f.indexOf("=") + 1) : flags[++i];
+			if (!v) return "--preset needs a name";
+			for (const n of v.split(",").filter(Boolean))
+				if (!o.presets.includes(n)) o.presets = [...o.presets, n];
+		} else if (f === "--no-preset" || f.startsWith("--no-preset=")) {
+			const v = f.includes("=") ? f.slice(f.indexOf("=") + 1) : flags[++i];
+			if (!v) return "--no-preset needs a name";
+			const off = v.split(",");
+			o.presets = o.presets.filter((n) => !off.includes(n));
+		} else if (f === "-q" || f === "--quiet") o.quiet = true;
+		else if (f === "--source-dot") o.sourceDot = true;
+		else if (f === "--format" || f.startsWith("--format=")) {
+			const v = f.includes("=") ? f.slice(f.indexOf("=") + 1) : flags[++i];
+			if (v !== "plain" && v !== "syrup" && v !== "html")
+				return `unknown format '${v}' (plain, syrup, html)`;
+			o.format = v;
+		} else return `unknown option '${f}'`;
+	}
+	return o;
 }

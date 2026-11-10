@@ -1,20 +1,65 @@
-.syrup-source { margin-bottom: 0.5em; }
-.syrup-output { border-left: 3px solid var(--background-modifier-border); padding-left: 0.75em; }
-.syrup-entry { margin: 0.4em 0; white-space: pre-wrap; }
-.syrup-error { color: var(--text-error); }
-.syrup-source .token.comment { color: var(--text-faint); font-style: italic; }
-.syrup-source .token.keyword { color: var(--color-purple); }
-.syrup-source .token.builtin { color: var(--color-cyan); }
-.syrup-source .token.function { color: var(--color-blue); }
-.syrup-source .token.type { color: var(--color-orange); }
-.syrup-source .token.number { color: var(--color-green); }
-.syrup-source .token.operator { color: var(--color-red); }
-.ask-source .token.comment { color: var(--text-faint); font-style: italic; }
-.ask-source .token.string { color: var(--color-orange); font-style: italic; }
-.ask-source .token.success { background-color: rgba(var(--color-green-rgb), 0.25); }
-.ask-source .token.primary { background-color: rgba(var(--color-orange-rgb), 0.3); }
-.ask-source .token.assumption { background-color: rgba(var(--color-purple-rgb), 0.3); }
-.ask-source .token.keyword { font-weight: bold; }
-.ask-source .token.type { color: var(--color-blue); }
-.ask-source .token.constructor { color: var(--color-red); }
-.ask-source .token.punctuation { font-weight: bold; }
+.syrup-source {
+	margin-bottom: 0.5em;
+}
+.syrup-output {
+	border-left: 3px solid var(--background-modifier-border);
+	padding-left: 0.75em;
+}
+.syrup-entry {
+	margin: 0.4em 0;
+	white-space: pre-wrap;
+}
+.syrup-error {
+	color: var(--text-error);
+}
+.syrup-source .token.comment {
+	color: var(--text-faint);
+	font-style: italic;
+}
+.syrup-source .token.keyword {
+	color: var(--color-purple);
+}
+.syrup-source .token.builtin {
+	color: var(--color-cyan);
+}
+.syrup-source .token.function {
+	color: var(--color-blue);
+}
+.syrup-source .token.type {
+	color: var(--color-orange);
+}
+.syrup-source .token.number {
+	color: var(--color-green);
+}
+.syrup-source .token.operator {
+	color: var(--color-red);
+}
+.ask-source .token.comment {
+	color: var(--text-faint);
+	font-style: italic;
+}
+.ask-source .token.string {
+	color: var(--color-orange);
+	font-style: italic;
+}
+.ask-source .token.success {
+	background-color: rgba(var(--color-green-rgb), 0.25);
+}
+.ask-source .token.primary {
+	background-color: rgba(var(--color-orange-rgb), 0.3);
+}
+.ask-source .token.assumption {
+	background-color: rgba(var(--color-purple-rgb), 0.3);
+}
+.ask-source .token.keyword {
+	font-weight: bold;
+}
+.ask-source .token.type {
+	color: var(--color-blue);
+}
+.ask-source .token.constructor {
+	color: var(--color-red);
+}
+.ask-source .token.punctuation {
+	font-weight: bold;
+}

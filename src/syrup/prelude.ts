@@ -3,7 +3,7 @@
 // default, so you can build the gates from `nand` yourself. `gates` is the
 // manual's "How to Turn Hardware Into Syrup" section, defined from `nand`.
 export const BUILTIN_PRESETS: Record<string, string> = {
-  gates: `
+	gates: `
 not(<Bit>) -> <Bit>
 not(X) = nand(X,X)
 

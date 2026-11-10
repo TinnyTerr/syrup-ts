@@ -60,9 +60,9 @@ table xor                 # syrup
 ```
 
 ```js
-table("xor", { "01": "1", "11": "0" });   // or [["01","1"], ...]
-row("xor", "10");                          // -> "1"
-test("xor is symmetric", () => assert(row("xor","01") === row("xor","10")));
+table("xor", { "01": "1", 11: "0" }); // or [["01","1"], ...]
+row("xor", "10"); // -> "1"
+test("xor is symmetric", () => assert(row("xor", "01") === row("xor", "10")));
 ```
 
 Library: `run(src, { tests: "...", testsLang: "js" }).tests` gives `{ passed, failed, results }`.
@@ -173,10 +173,10 @@ Separate from the library and CLI; each has its own manifest and build, and
 nothing in `src/` depends on them. `shared/tokens.ts` is the one token list
 both highlighters use.
 
-- `vscode/` — highlighting for `.syrup` files and ```` ```syrup ```` fences, and for `.ask` files (the CS103 proof assistant).
+- `vscode/` — highlighting for `.syrup` files and ` ```syrup ` fences, and for `.ask` files (the CS103 proof assistant).
   `cd vscode && bun run package` regenerates the TextMate grammar
   (`shared/gen-textmate.ts`) and builds a `.vsix`.
-- `obsidian/` — a ```` ```ask ```` block is highlighted only (tokens in `shared/ask-tokens.ts`). Syrup fences:
+- `obsidian/` — a ` ```ask ` block is highlighted only (tokens in `shared/ask-tokens.ts`). Syrup fences:
   `syrup` highlights only; `syrup-add` adds its code to the note's shared file (output hidden);
   `syrup-compute` runs the shared file above it plus itself and shows only its own output below
   (mermaid diagrams render natively); `syrup-compute-add` / `syrup-add-compute` do both.
