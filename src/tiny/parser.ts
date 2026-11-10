@@ -1,11 +1,4 @@
-import type { TinyMachineProgram } from "./ast";
-
-export class TinyMachineParseError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "TinyMachineParseError";
-	}
-}
+import { TinyMachineParseError, type TinyMachineProgram } from "./ast";
 
 export function parseTinyMachine(source: string): TinyMachineProgram {
 	const parts = source.trim().split(/\s+/);

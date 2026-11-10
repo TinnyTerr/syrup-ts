@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { parseTinyMachine, TinyMachineParseError } from "./parser";
+import { TinyMachineParseError } from "./ast";
+import { parseTinyMachine } from "./parser";
 
 describe("parseTinyMachine", () => {
 	test("parse case correctly", () => {

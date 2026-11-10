@@ -18,3 +18,47 @@ export interface Flags {
 	// carry flag
 	cf: boolean;
 }
+
+export enum Instructions {
+	JMP,
+	HLT,
+	JZE,
+	JNZ,
+	LDA,
+	STA,
+	GET,
+	PUT,
+	ROL,
+	ROR,
+	ADC,
+	CCF,
+	SCF,
+	DEL,
+	LDL,
+	FLA,
+}
+
+export function hasOperand(instruction: Instructions): boolean {
+	return (
+		(instruction > 0 && instruction < 5) ||
+		instruction === 10 ||
+		instruction === 15
+	);
+}
+
+export function memoryLocation(location: number): number {
+	return location & 0x0f;
+}
+
+export class TinyMachineParseError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "TinyMachineParseError";
+	}
+}
+export class TinyMachineRuntimeError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "TinyMachineRuntimeError";
+	}
+}
