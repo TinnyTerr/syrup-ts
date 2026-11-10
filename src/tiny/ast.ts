@@ -1,6 +1,20 @@
 export interface TinyMachineProgram {
-  memory: [string, string, string, string];
-  operation: string;
-  operand: string;
-  input: string[];
+	registers: {
+		ip: number;
+		li: number;
+		fr: Flags;
+		ac: number;
+	};
+	memory: number[];
+}
+
+export interface Flags {
+	// halt flag
+	hf: boolean;
+	// overflow flag
+	of: boolean;
+	// zero flag
+	zf: boolean;
+	// carry flag
+	cf: boolean;
 }
