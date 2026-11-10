@@ -1,3 +1,4 @@
+import type { TinyMachineProgram } from "./ast";
 import { parseTinyMachine } from "./parser";
 
 export function run(
@@ -6,6 +7,8 @@ export function run(
 ): string {
     // TODO: add object based output, to better display the output, and to allow for better testing
     const obj = parseTinyMachine(source);
+
+
 
     return "";
 }
@@ -36,4 +39,10 @@ export function run(
  * @returns The new state of the machine
  */
 
-function machineLoop(condition: TinyMachineProgram, inputs: string[]): { condition: TinyMachineProgram, }
+function machineLoop(condition: TinyMachineProgram, inputs: string[]): { condition: TinyMachineProgram, operands: { code: string, opr?: number, in?: number, out?: number } } {
+
+}
+
+function stringifyStep(condition: TinyMachineProgram): string {
+    return `${condition.registers.ip.toString(16).toUpperCase()} ${condition.registers.li.toString(16).toUpperCase()} ${Number(`0b${condition.registers.fr.hf ? 1 : 0}${condition.registers.fr.of ? 1 : 0}${condition.registers.fr.zf ? 1 : 0}${condition.registers.fr.cf ? 1 : 0}`).toString(16).toUpperCase()} ${condition.registers.ac.toString(16).toUpperCase()}  ${condition.memory.map((v) => v.toString(16).toUpperCase()).join("")}`;
+}
