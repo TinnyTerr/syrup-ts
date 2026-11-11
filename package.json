@@ -26,13 +26,15 @@
 		"syrup": "./dist/cli.js"
 	},
 	"scripts": {
-		"build:lib": "bun build ./src/syrup/index.ts --outdir dist --target browser --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --format esm -e mermaid && bun build ./src/tiny/index.ts --outfile dist/tiny.js --target browser --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --format esm && tsc -p tsconfig.build.json && tsc -p tsconfig.tiny-build.json",
-		"build:cli": "bun build ./index.ts --outfile dist/cli.js --target bun --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --format esm -e mermaid && chmod +x dist/cli.js",
-		"build": "rm -rf dist && bun run build:lib && bun run build:cli",
-		"typecheck": "tsc --noEmit",
-		"build:web": "bun build ./src/syrup/index.ts --outfile dist/web/syrup.esm.js --production --banner=\"/* Made by tinnyterr (tinnyterr@tinnyterr.com) Licenced under GPL-3.0-only */\" --target browser --format esm --minify && bun build ./web/global.ts --outfile dist/web/syrup.js --target browser --format iife --minify && bun build ./web/demo.tsx --outfile dist/web/demo.js --target browser --format esm --minify && cp web/demo.css dist/web/",
+		"build": "bun scripts/build.ts",
+		"build:lib": "bun scripts/build.ts --lib",
+		"build:cli": "bun scripts/build.ts --cli",
+		"build:web": "bun scripts/build.ts --web",
+		"build:obsidian": "bun scripts/build.ts --obsidian",
+		"build:vscode": "bun scripts/build.ts --vscode",
+		"build:all": "bun scripts/build.ts --all",
 		"build:exe": "bun build ./index.ts --compile --minify --outfile dist/exe/syrup",
-		"build:editors": "(cd obsidian && bun install && bun run build) && (cd vscode && bun run package)",
+		"typecheck": "tsc --noEmit",
 		"test": "bun test"
 	},
 	"devDependencies": {

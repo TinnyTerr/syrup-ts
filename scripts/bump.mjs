@@ -28,6 +28,8 @@ function editJson(path) {
 }
 
 editJson("package.json");
+if (fs.existsSync("obsidian/manifest.json")) editJson("obsidian/manifest.json");
+if (fs.existsSync("obsidian/package.json")) editJson("obsidian/package.json");
 
 console.log(
 	`\nNext: git commit -am "release ${version}" && git tag v${version} && git push --follow-tags`,
