@@ -4,11 +4,15 @@ name: release
 # the release checks out TinnyTerr/syrup-ts at the same tag, compiles it with plugin/, and attaches
 # main.js, manifest.json and styles.css (the three files Obsidian installs).
 on:
-  push:
-    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -17,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Tag must match manifest version
-        run: test "v$(jq -r .version manifest.json)" = "$GITHUB_REF_NAME" || { echo "tag must be v + manifest version"; exit 1; }
+        run: test "$(jq -r .version manifest.json)" = "${{ inputs.version }}" || { echo "tag must be version"; exit 1; }
 
       - uses: actions/checkout@v4
         with:
@@ -39,9 +43,19 @@ jobs:
         working-directory: build
         run: bun build plugin/main.ts --outfile main.js --target node --format cjs -e obsidian -e electron
 
+      - name: Place built main.js beside the release assets
+        run: cp build/main.js .
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
       - name: Publish
         run: |
-          cp build/main.js .
-          gh release create "$GITHUB_REF_NAME" main.js manifest.json styles.css --title "$GITHUB_REF_NAME" --generate-notes
+          gh release create "${{ inputs.version }}" main.js manifest.json styles.css --title "${{ inputs.version }}" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
