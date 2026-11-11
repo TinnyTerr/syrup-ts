@@ -1,10 +1,11 @@
 import {
+	Component,
 	loadPrism,
 	type MarkdownPostProcessorContext,
 	MarkdownRenderer,
 	Plugin,
 } from "obsidian";
-import { run } from "../src/syrup/index";
+import { run as runSrc } from "../src/syrup/index";
 import {
 	askPrismGrammar,
 	defineAskCm5Mode,
@@ -12,9 +13,34 @@ import {
 	prismGrammar,
 } from "./highlight";
 
+// the shape of run()'s result that this plugin reads (see RunResult in syrup-ts src/run.ts)
+interface SyrupRun {
+	log: string[];
+	errorCount: number;
+}
+const run = runSrc as (source: string) => SyrupRun;
+
+// the slice of Prism this plugin uses; loadPrism() is typed as any by obsidian
+interface PrismToken {
+	type: string;
+	content: PrismNode;
+}
+type PrismNode = string | PrismToken | PrismNode[];
+interface PrismApi {
+	languages: Record<string, object>;
+	tokenize(text: string, grammar: object): PrismNode[];
+}
+
+// builds the same spans Prism.highlight would, as DOM nodes rather than an HTML string
+function renderTokens(parent: HTMLElement, node: PrismNode): void {
+	if (typeof node === "string") parent.appendText(node);
+	else if (Array.isArray(node))
+		for (const child of node) renderTokens(parent, child);
+	else renderTokens(parent.createSpan({ cls: `token ${node.type}` }), node.content);
+}
+
 // fence flavours: plain `syrup` only highlights; `add` feeds the note's shared file;
 // `compute` shows output below; the combined ones do both
-const _ADD = ["syrup-add", "syrup-compute-add", "syrup-add-compute"];
 const COMPUTE = ["syrup-compute", "syrup-compute-add", "syrup-add-compute"];
 
 // every block in the note that feeds the shared file, in order; `hidden` ones sit inside %% comments %%
@@ -41,20 +67,20 @@ export default class SyrupPlugin extends Plugin {
 		dbg("loaded");
 		defineCm5Mode();
 		defineAskCm5Mode();
-		const prism = await loadPrism();
+		const prism = (await loadPrism()) as PrismApi;
 		prism.languages.syrup = prismGrammar;
 		prism.languages.ask = askPrismGrammar;
 
 		this.registerMarkdownCodeBlockProcessor("ask", (source, el) => {
 			const pre = el.createEl("pre", { cls: "ask-source language-ask" });
 			const code = pre.createEl("code", { cls: "language-ask" });
-			code.innerHTML = prism.highlight(source, prism.languages.ask, "ask");
+			renderTokens(code, prism.tokenize(source, prism.languages.ask!));
 		});
 
 		const showSource = (source: string, el: HTMLElement) => {
 			const pre = el.createEl("pre", { cls: "syrup-source language-syrup" });
 			const code = pre.createEl("code", { cls: "language-syrup" });
-			code.innerHTML = prism.highlight(source, prism.languages.syrup, "syrup");
+			renderTokens(code, prism.tokenize(source, prism.languages.syrup!));
 		};
 
 		// highlight only; add-only blocks feed the shared file but never show output
@@ -126,26 +152,32 @@ export default class SyrupPlugin extends Plugin {
 				console.error(tag, "compute failed", e);
 				log = [`Error: ${(e as Error).message}`];
 			}
-			for (const entry of log) {
-				if (entry.startsWith("```")) {
-					// mermaid fences etc: let Obsidian render them
-					const box = out.createDiv({ cls: "syrup-block" });
-					await MarkdownRenderer.render(
-						this.app,
-						entry,
-						box,
-						ctx.sourcePath,
-						this,
-					);
-				} else {
-					// truth tables are column-aligned plain text; markdown would mangle them
-					out.createEl("pre", {
-						cls: entry.startsWith("Error:")
-							? "syrup-entry syrup-error"
-							: "syrup-entry",
-						text: entry,
-					});
+			// a child component, not the plugin itself: renders get unloaded with this block
+			const renderer = this.addChild(new Component());
+			try {
+				for (const entry of log) {
+					if (entry.startsWith("```")) {
+						// mermaid fences etc: let Obsidian render them
+						const box = out.createDiv({ cls: "syrup-block" });
+						await MarkdownRenderer.render(
+							this.app,
+							entry,
+							box,
+							ctx.sourcePath,
+							renderer,
+						);
+					} else {
+						// truth tables are column-aligned plain text; markdown would mangle them
+						out.createEl("pre", {
+							cls: entry.startsWith("Error:")
+								? "syrup-entry syrup-error"
+								: "syrup-entry",
+							text: entry,
+						});
+					}
 				}
+			} finally {
+				this.removeChild(renderer);
 			}
 		}
 	}

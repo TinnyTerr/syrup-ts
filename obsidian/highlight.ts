@@ -1,5 +1,30 @@
-import { ASK_RULES } from "../shared/ask-tokens";
-import { RULES } from "../shared/tokens";
+import { ASK_RULES as ASK_RULES_SRC } from "../shared/ask-tokens";
+import { RULES as RULES_SRC } from "../shared/tokens";
+
+// the token lists live in the syrup-ts checkout (copied in at release time); the
+// shapes are spelled out here so nothing downstream is typed `any`
+type SyrupRuleName =
+	| "comment"
+	| "type"
+	| "keyword"
+	| "builtin"
+	| "func"
+	| "number"
+	| "operator"
+	| "punctuation";
+type AskRuleName =
+	| "comment"
+	| "string"
+	| "success"
+	| "primary"
+	| "assumption"
+	| "keyword"
+	| "nonterminal"
+	| "constructor"
+	| "punctuation";
+
+const RULES = RULES_SRC as Record<SyrupRuleName, string>;
+const ASK_RULES = ASK_RULES_SRC as Record<AskRuleName, string>;
 
 // Prism grammar, for our own rendering in reading view.
 export const prismGrammar = {
@@ -13,9 +38,26 @@ export const prismGrammar = {
 	punctuation: new RegExp(RULES.punctuation),
 };
 
-// CodeMirror 5 mode, which Obsidian's editor still uses for fenced blocks
-// in live preview / source mode. Token names map to cm-<name> classes.
-const cmRules: [string, RegExp][] = [
+// the parts of CodeMirror 5 Obsidian's editor still uses for fenced blocks
+export interface CMStream {
+	eatSpace(): boolean;
+	eol(): boolean;
+	match(pattern: string | RegExp): boolean | RegExpMatchArray | null;
+	next(): string | void;
+}
+
+interface CodeMirrorStatic {
+	defineMode(name: string, factory: (cfg: unknown) => object): void;
+	getMode(cfg: unknown, spec: string): object;
+	defineMIME?(mime: string, spec: string): void;
+}
+
+function codeMirror(): CodeMirrorStatic | undefined {
+	return (window as Window & { CodeMirror?: CodeMirrorStatic }).CodeMirror;
+}
+
+// CodeMirror 5 mode. Token names map to cm-<name> classes.
+const cmSources: [string, string][] = [
 	["comment", RULES.comment],
 	["type", RULES.type],
 	["keyword", RULES.keyword],
@@ -24,10 +66,11 @@ const cmRules: [string, RegExp][] = [
 	["number", RULES.number],
 	["operator", RULES.operator],
 	["bracket", RULES.punctuation],
-].map(([name, src]) => [name as string, new RegExp(`^(?:${src})`)]);
+];
+const cmRules = cmSources.map(([name, src]): [string, RegExp] => [name, new RegExp("^(?:" + src + ")")]);
 
 export function defineCm5Mode(): boolean {
-	const CM = (window as any).CodeMirror;
+	const CM = codeMirror();
 	if (!CM?.defineMode) return false;
 	// every fence flavour highlights the same way
 	for (const name of [
@@ -36,10 +79,10 @@ export function defineCm5Mode(): boolean {
 		"syrup-compute-add",
 		"syrup-add-compute",
 	]) {
-		CM.defineMode(name, (cfg: any) => CM.getMode(cfg, "syrup"));
+		CM.defineMode(name, (cfg) => CM.getMode(cfg, "syrup"));
 	}
 	CM.defineMode("syrup", () => ({
-		token(stream: any) {
+		token(stream: CMStream) {
 			if (stream.eatSpace()) return null;
 			for (const [name, re] of cmRules) if (stream.match(re)) return name;
 			stream.next();
@@ -65,7 +108,7 @@ export const askPrismGrammar = {
 	punctuation: new RegExp(ASK_RULES.punctuation),
 };
 
-const askCmRules: [string, RegExp][] = [
+const askCmSources: [string, string][] = [
 	["comment", ASK_RULES.comment],
 	["string", ASK_RULES.string],
 	["positive", ASK_RULES.success],
@@ -75,14 +118,15 @@ const askCmRules: [string, RegExp][] = [
 	["tag", ASK_RULES.nonterminal],
 	["variable-2", ASK_RULES.constructor],
 	["bracket", ASK_RULES.punctuation],
-].map(([name, src]) => [name as string, new RegExp(`^(?:${src})`)]);
+];
+const askCmRules = askCmSources.map(([name, src]): [string, RegExp] => [name, new RegExp("^(?:" + src + ")")]);
 
 export function defineAskCm5Mode(): boolean {
-	const CM = (window as any).CodeMirror;
+	const CM = codeMirror();
 	if (!CM?.defineMode) return false;
 	CM.defineMode("ask", () => ({
 		startState: () => ({ depth: 0 }),
-		token(stream: any, state: { depth: number }) {
+		token(stream: CMStream, state: { depth: number }) {
 			if (state.depth > 0) {
 				while (!stream.eol()) {
 					if (stream.match("{-")) state.depth++;

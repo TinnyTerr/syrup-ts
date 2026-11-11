@@ -1,7 +1,7 @@
 {
 	"id": "syrup",
 	"name": "Syrup",
-	"version": "0.1.0",
+	"version": "0.3.2",
 	"minAppVersion": "1.4.0",
 	"description": "Run and highlight Syrup circuit code blocks, with circuit diagrams.",
 	"author": "tinnyterr",
