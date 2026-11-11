@@ -479,7 +479,7 @@ class Layout {
 			return ep;
 		});
 		for (let i = outSlots.length - 1; i >= 0; i--)
-			this.consume(outSlots[i]?.ref, outEps[i]!);
+			this.consume(outSlots[i]!.ref, outEps[i]!);
 		this.outputs = outEps.map((ep, i) => ({ ep, label: outSlots[i]?.label }));
 
 		for (let i = def.eqns.length - 1; i >= 0; i--) {

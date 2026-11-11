@@ -289,7 +289,7 @@ function truthTableDoc(ctx: Ctx, name: string): Doc {
 	for (const flat of allBitCombos(width)) {
 		const inputs = reshapeList(flat, c.ins);
 		const inCells: TCell[] = inputs.map((v, i) => ({
-			text: inCols ? inCols[i]?.cell(v) : compact(v),
+			text: inCols ? inCols[i]!.cell(v) : compact(v),
 		}));
 		const rows: TCell[][] = [];
 		for (const st of states) {
@@ -537,10 +537,10 @@ function witness(
 				const path = [x.inputText[i]!];
 				for (
 					let k = key(a, b);
-					seen.get(k)?.parent !== -1;
-					k = seen.get(k)?.parent
+					seen.get(k)!.parent !== -1;
+					k = seen.get(k)!.parent
 				)
-					path.unshift(x.inputText[seen.get(k)?.input]!);
+					path.unshift(x.inputText[seen.get(k)!.input]!);
 				return path;
 			}
 			const na = x.next[a]?.[i]!;
@@ -637,7 +637,7 @@ export function runEquiv(ctx: Ctx, a: string, b: string): Message[] {
 	// greatest bisimulation over all pairs of states
 	const R: boolean[][] = Array.from({ length: A.nstates }, (_, s) =>
 		Array.from({ length: B.nstates }, (_, t) =>
-			A.out[s]?.every((o, i) => o === B.out[t]?.[i]),
+			A.out[s]!.every((o, i) => o === B.out[t]![i]),
 		),
 	);
 	for (let changed = true; changed; ) {
@@ -711,9 +711,9 @@ export function runEquiv(ctx: Ctx, a: string, b: string): Message[] {
 			"when ",
 			circ(X.name),
 			" has memory ",
-			code(memBits(X.bitsOf(best?.s))),
+			code(memBits(X.bitsOf(best!.s))),
 		);
-		const ifs = best?.ws.map(({ t, w }) =>
+		const ifs = best!.ws.map(({ t, w }) =>
 			seq(
 				"if ",
 				circ(Y.name),

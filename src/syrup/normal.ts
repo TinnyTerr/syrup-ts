@@ -260,22 +260,22 @@ function paramNames(def: Def): string[] {
 }
 
 export function dnf(reg: Registry, name: string): Def {
-	const c = reg.get(name);
+	const c = reg.get(name)!;
 	const def = needDef(reg, name);
 	if (discoverMemPaths(reg, name).length > 0) {
 		throw new RuntimeError(
 			`Circuit \`${name}\` has memory, so it has no disjunctive normal form.`,
 		);
 	}
-	const width = c?.ins.reduce((n, t) => n + tyWidth(t), 0);
-	const outWidth = c?.outs.reduce((n, t) => n + tyWidth(t), 0);
+	const width = c.ins.reduce((n, t) => n + tyWidth(t), 0);
+	const outWidth = c.outs.reduce((n, t) => n + tyWidth(t), 0);
 	const minterms: number[][] = Array.from({ length: outWidth }, () => []);
 	let row = 0;
 	for (const flat of allBitCombos(width)) {
 		const { outputs } = runComponent(
 			reg,
 			name,
-			reshapeList(flat, c?.ins),
+			reshapeList(flat, c.ins),
 			new Map(),
 		);
 		flattenValues(outputs).forEach((b: Bit, i) => {
@@ -283,14 +283,14 @@ export function dnf(reg: Registry, name: string): Def {
 				throw new RuntimeError(
 					`Circuit \`${name}\` has an undetermined output, so it has no disjunctive normal form.`,
 				);
-			if (b === 1) minterms[i]?.push(row);
+			if (b === 1) minterms[i]!.push(row);
 		});
 		row++;
 	}
 	const names = paramNames(def);
 	let bits = minterms.map((ms) => dnfExpr(dnfTerms(ms, width), names));
 	const rhs: Expr[] = [];
-	for (const t of c?.outs) {
+	for (const t of c.outs) {
 		const r = build(t, bits);
 		rhs.push(r.e);
 		bits = r.rest;
