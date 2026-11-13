@@ -1,20 +1,18 @@
-import type { TinyMachineProgram } from "./ast";
+import { Instructions, type TinyMachineProgram } from "./ast";
 import { parseTinyMachine } from "./parser";
-import { run } from "./run";
+import { runSteps } from "./run";
 
 export function testRun(
 	source: string,
 	input: string | string[] | number[],
 	attempt: string, // ! This is DIRECT user input
 ): string {
-	const computed = run(source, input)
-		.split("\n")
-		.filter((v) => !v.startsWith("Runtime Error:"))
-		.map((v) => parseTinyMachine(v.trim()));
+	const computed = runSteps(source, input);
 	const user = attempt
 		.split("\n")
-		.filter((v) => !v.startsWith("Runtime Error:"))
-		.map((v) => parseTinyMachine(v.trim()));
+		.map((v) => v.trim())
+		.filter((v) => v.length > 0 && !v.startsWith("Runtime Error:"))
+		.map((v) => parseTinyMachine(v));
 
 	let message = "";
 
@@ -24,6 +22,8 @@ export function testRun(
 		const computedLine = computed[i];
 
 		if (!line) {
+			// the final halted row has no instruction; it's implied by the HLT row
+			if (i === computed.length - 1 && !computedLine?.opr && !computedLine?.error) break;
 			message = `What next?`;
 			break;
 		}
@@ -34,9 +34,10 @@ export function testRun(
 			message = `Something went wrong`;
 			break;
 		}
-		message +=
+		message =
 			compareMemory(computedLine.memory, line.memory) ||
-			compareRegisters(computedLine.registers, line.registers);
+			compareRegisters(computedLine.registers, line.registers) ||
+			compareOpr(computedLine.opr, line.opr);
 		if (message) break;
 	}
 
@@ -47,12 +48,29 @@ function compareMemory(
 	computed: TinyMachineProgram["memory"],
 	user: TinyMachineProgram["memory"],
 ): string {
-	computed.forEach((v, i) => {
-		if (v !== user[i]) {
-			return `Memory mismatch at index ${i}: expected ${v}, got ${user[i]}`;
+	for (let i = 0; i < computed.length; i++) {
+		if (computed[i] !== user[i]) {
+			return `Memory mismatch at index ${i}: expected ${computed[i]}, got ${user[i]}`;
 		}
-	});
+	}
 
+	return "";
+}
+
+function compareOpr(
+	computed: TinyMachineProgram["opr"],
+	user: TinyMachineProgram["opr"],
+): string {
+	// the user's row may omit the instruction columns entirely
+	if (!computed || !user) return "";
+	if (computed.opera !== user.opera) {
+		return `Instruction mismatch: expected ${Instructions[computed.opera]}, got ${Instructions[user.opera]}`;
+	}
+	for (const k of ["oper", "in", "out"] as const) {
+		if (computed[k] !== user[k]) {
+			return `Operand ${k} mismatch: expected ${computed[k] ?? "-"}, got ${user[k] ?? "-"}`;
+		}
+	}
 	return "";
 }
 

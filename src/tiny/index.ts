@@ -5,4 +5,4 @@ export {
 	TinyMachineRuntimeError,
 } from "./ast";
 export { parseTinyMachine } from "./parser";
-export { run } from "./run";
+export { run, runSteps } from "./run";

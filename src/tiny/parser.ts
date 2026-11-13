@@ -1,4 +1,8 @@
-import { TinyMachineParseError, type TinyMachineProgram } from "./ast";
+import {
+	Instructions,
+	TinyMachineParseError,
+	type TinyMachineProgram,
+} from "./ast";
 
 export function parseTinyMachine(source: string): TinyMachineProgram {
 	const parts = source
@@ -13,50 +17,38 @@ export function parseTinyMachine(source: string): TinyMachineProgram {
 		);
 	}
 
-	// @ts-expect-error this is checked previously
-	const processedParts: [number, number, number, number, number[]] = parts.map(
-		(v) =>
-			v.length === 1
-				? Number(`0x${v}`)
-				: v.split("").map((v) => Number(`0x${v}`)),
-	);
+	const hex = (v: string) => Number(`0x${v}`);
+	const optHex = (v: string | undefined) =>
+		v === undefined || v === "-" ? undefined : hex(v);
 
-	const [
-		ipStr,
-		liStr,
-		frStr,
-		acStr,
-		memoryStr,
-		operaStr = null,
-		operStr = null,
-		inStr = null,
-		outStr = null,
-	] = processedParts;
+	const [ipStr, liStr, frStr, acStr, memoryStr, opera, oper, inp, out] =
+		parts as [string, string, string, string, string, string, string, string, string];
+	const fr = hex(frStr);
+
+	let opr: TinyMachineProgram["opr"];
+	if (parts.length === 9) {
+		const code = Instructions[opera as keyof typeof Instructions];
+		if (code === undefined) {
+			throw new TinyMachineParseError(`Unknown instruction ${opera}`);
+		}
+		opr = { opera: code, oper: optHex(oper), in: optHex(inp), out: optHex(out) };
+	}
 
 	const result: TinyMachineProgram = {
 		registers: {
-			ip: ipStr,
-			li: liStr,
+			ip: hex(ipStr),
+			li: hex(liStr),
 			// flags to bits is [hf, of , zf, cf]
 			fr: {
-				hf: ((frStr >> 3) & 1) === 1,
-				of: ((frStr >> 2) & 1) === 1,
-				zf: ((frStr >> 1) & 1) === 1,
-				cf: ((frStr >> 0) & 1) === 1,
+				hf: ((fr >> 3) & 1) === 1,
+				of: ((fr >> 2) & 1) === 1,
+				zf: ((fr >> 1) & 1) === 1,
+				cf: ((fr >> 0) & 1) === 1,
 			},
-			ac: acStr,
+			ac: hex(acStr),
 		},
-		memory: memoryStr,
-		// @ts-expect-error this is checked previously
-		opr:
-			parts.length === 9
-				? {
-						opera: operaStr,
-						oper: operStr,
-						in: inStr,
-						out: outStr,
-					}
-				: undefined,
+		memory: memoryStr.split("").map(hex),
+		opr,
 	};
 
 	return result;

@@ -6,12 +6,15 @@ export interface TinyMachineProgram {
 		ac: number;
 	};
 	memory: number[];
+	/** the instruction that ran on this row; absent on the final halted row */
 	opr?: {
-		opera: number;
-		oper: number;
-		in: number;
-		out: number;
+		opera: Instructions;
+		oper?: number;
+		in?: number;
+		out?: number;
 	};
+	/** set on a row that ended in a runtime error */
+	error?: string;
 }
 
 export interface Flags {

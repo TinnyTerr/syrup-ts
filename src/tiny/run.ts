@@ -7,16 +7,11 @@ import {
 } from "./ast";
 import { parseTinyMachine } from "./parser";
 
-export function run(
+/** Run the machine and return one object per trace row. */
+export function runSteps(
 	source: string,
 	_input: string | string[] | number[],
-	options: { string: boolean } = { string: true },
-): string {
-	if (!options.string) {
-		throw new Error("Non-string output is not yet implemented");
-	}
-
-	// TODO: add object based output, to better display the output, and to allow for better testing
+): TinyMachineProgram[] {
 	const obj = parseTinyMachine(source);
 	// @ts-expect-error ts is unable to realise all the elements are made to string
 	const inputs: string[] = Array.isArray(_input)
@@ -26,7 +21,7 @@ export function run(
 		: [_input];
 
 	const state = obj;
-	const lines: string[] = [];
+	const rows: TinyMachineProgram[] = [];
 	// The machine is deterministic and finite, so seeing the exact same state
 	// again with the same inputs left means it will repeat forever. A GET inside
 	// the loop eats an input, so that state never repeats (it either escapes or
@@ -35,28 +30,63 @@ export function run(
 	while (true) {
 		const key = `${inputs.length}|${JSON.stringify(state)}`;
 		if (seen.has(key)) {
-			lines.push("Runtime Error: Infinite loop detected");
+			rows.push({
+				...structuredClone(state),
+				error: "Infinite loop detected",
+			});
 			break;
 		}
 		seen.add(key);
 		// the row shows the state *before* this instruction runs
 		const before = structuredClone(state);
 		try {
-			const operands = machineLoop(state, inputs);
-			lines.push(stringifyStep(before, operands));
+			const info = machineLoop(state, inputs);
+			rows.push({
+				...before,
+				opr: { opera: info.code, oper: info.opr, in: info.in, out: info.out },
+			});
 
-			if (state.registers.fr.hf) break;
+			if (state.registers.fr.hf) {
+				// final row: the halted machine, with ip stepped past the HLT
+				rows.push({
+					registers: {
+						...state.registers,
+						ip: memoryLocation(state.registers.ip + 1),
+						fr: { ...state.registers.fr },
+					},
+					memory: [...state.memory],
+				});
+				break;
+			}
 		} catch (e) {
 			if (e instanceof TinyMachineRuntimeError) {
-				lines.push(stringifyStep(before));
-				lines.push(`Runtime Error: ${e.message}`);
+				rows.push({ ...before, error: e.message });
 				break;
 			}
 			throw e;
 		}
 	}
 
-	return lines.join("\n");
+	return rows;
+}
+
+export function run(
+	source: string,
+	input: string | string[] | number[],
+): string;
+export function run(
+	source: string,
+	input: string | string[] | number[],
+	options: { string: false },
+): TinyMachineProgram[];
+export function run(
+	source: string,
+	input: string | string[] | number[],
+	options: { string: boolean } = { string: true },
+): string | TinyMachineProgram[] {
+	const rows = runSteps(source, input);
+	if (!options.string) return rows;
+	return rows.flatMap(stringifyStep).join("\n");
 }
 
 type StepInfo = { code: Instructions; opr?: number; in?: number; out?: number };
@@ -155,33 +185,17 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 	return info;
 }
 
-function stringifyStep(
-	condition: TinyMachineProgram,
-	operands?: StepInfo,
-): string {
-	let out =
-		`${condition.registers.ip.toString(16).toUpperCase()} ${condition.registers.li.toString(16).toUpperCase()} ${Number(
-			`0b${condition.registers.fr.hf ? 1 : 0}${condition.registers.fr.of ? 1 : 0}${condition.registers.fr.zf ? 1 : 0}${condition.registers.fr.cf ? 1 : 0}`,
-		)
-			.toString(16)
-			.toUpperCase()} ${condition.registers.ac.toString(16).toUpperCase()}  ${condition.memory.map((v) => v.toString(16).toUpperCase()).join("")}  ${Instructions[operands?.code ?? 0]} ${operands?.opr !== undefined ? operands.opr.toString(16).toUpperCase() : "-"} ${operands?.in !== undefined ? operands.in.toString(16).toUpperCase() : "-"} ${operands?.out !== undefined ? operands.out.toString(16).toUpperCase() : "-"}`.trim();
-
-	if (operands?.opr === Instructions.HLT) {
-		out += stringifyStep({
-			registers: {
-				ip: memoryLocation(condition.registers.ip + 1),
-				li: condition.registers.li,
-				fr: {
-					hf: true,
-					of: condition.registers.fr.of,
-					zf: condition.registers.fr.zf,
-					cf: condition.registers.fr.cf,
-				},
-				ac: condition.registers.ac,
-			},
-			memory: condition.memory,
-		});
+function stringifyStep(row: TinyMachineProgram): string[] {
+	const { registers: r, memory, opr, error } = row;
+	const fr = Number(
+		`0b${r.fr.hf ? 1 : 0}${r.fr.of ? 1 : 0}${r.fr.zf ? 1 : 0}${r.fr.cf ? 1 : 0}`,
+	);
+	const hex = (n: number | undefined) =>
+		n === undefined ? "-" : n.toString(16).toUpperCase();
+	let line = `${hex(r.ip)} ${hex(r.li)} ${hex(fr)} ${hex(r.ac)}  ${memory.map(hex).join("")}`;
+	if (opr) {
+		line += `  ${Instructions[opr.opera]} ${hex(opr.oper)} ${hex(opr.in)} ${hex(opr.out)}`;
 	}
-
-	return out.trim();
+	// an errored row is the state with no instruction, then the error line
+	return error ? [line, `Runtime Error: ${error}`] : [line];
 }

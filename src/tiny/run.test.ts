@@ -37,7 +37,7 @@ describe("tiny machine execution loop testing", () => {
 				`C 0 1 A  65F65E65D65CAC70  ADC C - -`,
 				`E 0 5 5  65F65E65D65CAC70  PUT - - 5`,
 				`F 0 5 5  65F65E65D65CAC70  HLT - - -`,
-				`0 0 5 5  65F65E65D65CAC70`,
+				`0 0 D 5  65F65E65D65CAC70`,
 			].join("\n"),
 		);
 	});
