@@ -1,10 +1,16 @@
 import { TinyMachineParseError, type TinyMachineProgram } from "./ast";
 
 export function parseTinyMachine(source: string): TinyMachineProgram {
-	const parts = source.trim().split(/\s+/);
+	const parts = source
+		.trim()
+		.split(/\s+/)
+		.map((v) => v.toUpperCase().trim())
+		.filter((v) => v.length > 0);
 
-	if (parts.length !== 5) {
-		throw new TinyMachineParseError(`Expected 5 fields, got ${parts.length}`);
+	if (parts.length !== 5 && parts.length !== 9) {
+		throw new TinyMachineParseError(
+			`Expected 5 or 9 fields, got ${parts.length}`,
+		);
 	}
 
 	// @ts-expect-error this is checked previously
@@ -15,7 +21,17 @@ export function parseTinyMachine(source: string): TinyMachineProgram {
 				: v.split("").map((v) => Number(`0x${v}`)),
 	);
 
-	const [ipStr, liStr, frStr, acStr, memoryStr] = processedParts;
+	const [
+		ipStr,
+		liStr,
+		frStr,
+		acStr,
+		memoryStr,
+		operaStr = null,
+		operStr = null,
+		inStr = null,
+		outStr = null,
+	] = processedParts;
 
 	const result: TinyMachineProgram = {
 		registers: {
@@ -31,6 +47,16 @@ export function parseTinyMachine(source: string): TinyMachineProgram {
 			ac: acStr,
 		},
 		memory: memoryStr,
+		// @ts-expect-error this is checked previously
+		opr:
+			parts.length === 9
+				? {
+						opera: operaStr,
+						oper: operStr,
+						in: inStr,
+						out: outStr,
+					}
+				: undefined,
 	};
 
 	return result;

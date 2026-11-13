@@ -6,6 +6,12 @@ export interface TinyMachineProgram {
 		ac: number;
 	};
 	memory: number[];
+	opr?: {
+		opera: number;
+		oper: number;
+		in: number;
+		out: number;
+	};
 }
 
 export interface Flags {

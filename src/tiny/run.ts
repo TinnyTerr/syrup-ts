@@ -159,9 +159,29 @@ function stringifyStep(
 	condition: TinyMachineProgram,
 	operands?: StepInfo,
 ): string {
-	return `${condition.registers.ip.toString(16).toUpperCase()} ${condition.registers.li.toString(16).toUpperCase()} ${Number(
-		`0b${condition.registers.fr.hf ? 1 : 0}${condition.registers.fr.of ? 1 : 0}${condition.registers.fr.zf ? 1 : 0}${condition.registers.fr.cf ? 1 : 0}`,
-	)
-		.toString(16)
-		.toUpperCase()} ${condition.registers.ac.toString(16).toUpperCase()}  ${condition.memory.map((v) => v.toString(16).toUpperCase()).join("")}  ${Instructions[operands?.code ?? 0]} ${operands?.opr !== undefined ? operands.opr.toString(16).toUpperCase() : "-"} ${operands?.in !== undefined ? operands.in.toString(16).toUpperCase() : "-"} ${operands?.out !== undefined ? operands.out.toString(16).toUpperCase() : "-"}`.trim();
+	let out =
+		`${condition.registers.ip.toString(16).toUpperCase()} ${condition.registers.li.toString(16).toUpperCase()} ${Number(
+			`0b${condition.registers.fr.hf ? 1 : 0}${condition.registers.fr.of ? 1 : 0}${condition.registers.fr.zf ? 1 : 0}${condition.registers.fr.cf ? 1 : 0}`,
+		)
+			.toString(16)
+			.toUpperCase()} ${condition.registers.ac.toString(16).toUpperCase()}  ${condition.memory.map((v) => v.toString(16).toUpperCase()).join("")}  ${Instructions[operands?.code ?? 0]} ${operands?.opr !== undefined ? operands.opr.toString(16).toUpperCase() : "-"} ${operands?.in !== undefined ? operands.in.toString(16).toUpperCase() : "-"} ${operands?.out !== undefined ? operands.out.toString(16).toUpperCase() : "-"}`.trim();
+
+	if (operands?.opr === Instructions.HLT) {
+		out += stringifyStep({
+			registers: {
+				ip: memoryLocation(condition.registers.ip + 1),
+				li: condition.registers.li,
+				fr: {
+					hf: true,
+					of: condition.registers.fr.of,
+					zf: condition.registers.fr.zf,
+					cf: condition.registers.fr.cf,
+				},
+				ac: condition.registers.ac,
+			},
+			memory: condition.memory,
+		});
+	}
+
+	return out.trim();
 }

@@ -37,6 +37,7 @@ describe("tiny machine execution loop testing", () => {
 				`C 0 1 A  65F65E65D65CAC70  ADC C - -`,
 				`E 0 5 5  65F65E65D65CAC70  PUT - - 5`,
 				`F 0 5 5  65F65E65D65CAC70  HLT - - -`,
+				`0 0 5 5  65F65E65D65CAC70`,
 			].join("\n"),
 		);
 	});
@@ -60,6 +61,7 @@ describe("tiny machine execution loop testing", () => {
 				`C 0 1 5  B6596A95A25CAF70  ADC F - -`,
 				`E 0 0 6  B6596A95A25CAF70  PUT - - 6`,
 				`F 0 0 6  B6596A95A25CAF70  HLT - - -`,
+				`0 0 8 6  B6596A95A25CAF70`,
 			].join("\n"),
 		);
 	});
@@ -82,6 +84,7 @@ describe("tiny machine execution loop testing", () => {
 				`6 0 0 C  B6A656CA70F71000  SCF - - -`,
 				`7 0 1 C  B6A656CA70F71000  ADC 7 - -`,
 				`9 0 5 7  B6A656CA70F71000  HLT - - -`,
+				`A 0 D 7  B6A656CA70F71000`,
 			].join("\n"),
 		);
 	});
