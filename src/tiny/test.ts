@@ -16,7 +16,6 @@ export function testRun(
 
 	let message = "";
 
-	// TODO: add faithful error lines compared to the original implementation, albeit less informative
 	for (let i = 0; i < Math.max(computed.length, user.length); i++) {
 		const line = user[i];
 		const computedLine = computed[i];
@@ -34,27 +33,37 @@ export function testRun(
 			message = `Something went wrong`;
 			break;
 		}
-		message =
-			compareMemory(computedLine.memory, line.memory) ||
-			compareRegisters(computedLine.registers, line.registers) ||
-			compareOpr(computedLine.opr, line.opr);
+		message = discrepancy(computedLine, line) || compareOpr(computedLine.opr, line.opr);
 		if (message) break;
 	}
 
 	return message;
 }
 
-function compareMemory(
-	computed: TinyMachineProgram["memory"],
-	user: TinyMachineProgram["memory"],
+/**
+ * Mirrors the original's less informative error: just names the cells that
+ * differ, memory by index and registers by name, e.g.
+ * `Configuration discrepancy: [14] and [15]`
+ */
+function discrepancy(
+	computed: TinyMachineProgram,
+	user: TinyMachineProgram,
 ): string {
-	for (let i = 0; i < computed.length; i++) {
-		if (computed[i] !== user[i]) {
-			return `Memory mismatch at index ${i}: expected ${computed[i]}, got ${user[i]}`;
-		}
+	const bad: string[] = [];
+	for (const k of ["ip", "li", "ac"] as const) {
+		if (computed.registers[k] !== user.registers[k]) bad.push(k);
 	}
+	if (JSON.stringify(computed.registers.fr) !== JSON.stringify(user.registers.fr)) {
+		bad.push("fr");
+	}
+	for (let i = 0; i < computed.memory.length; i++) {
+		if (computed.memory[i] !== user.memory[i]) bad.push(String(i));
+	}
+	if (bad.length === 0) return "";
 
-	return "";
+	const cells = bad.map((v) => `[${v}]`);
+	const last = cells.pop();
+	return `Configuration discrepancy: ${cells.length ? `${cells.join(", ")} and ` : ""}${last}`;
 }
 
 function compareOpr(
@@ -71,25 +80,5 @@ function compareOpr(
 			return `Operand ${k} mismatch: expected ${computed[k] ?? "-"}, got ${user[k] ?? "-"}`;
 		}
 	}
-	return "";
-}
-
-function compareRegisters(
-	computed: TinyMachineProgram["registers"],
-	user: TinyMachineProgram["registers"],
-): string {
-	if (computed.ip !== user.ip) {
-		return `Instruction pointer mismatch: expected ${computed.ip}, got ${user.ip}`;
-	}
-	if (computed.li !== user.li) {
-		return `Line index mismatch: expected ${computed.li}, got ${user.li}`;
-	}
-	if (computed.ac !== user.ac) {
-		return `Accumulator mismatch: expected ${computed.ac}, got ${user.ac}`;
-	}
-	if (JSON.stringify(computed.fr) !== JSON.stringify(user.fr)) {
-		return `Flags mismatch: expected ${JSON.stringify(computed.fr)}, got ${JSON.stringify(user.fr)}`;
-	}
-
 	return "";
 }

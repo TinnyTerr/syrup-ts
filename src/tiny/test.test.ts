@@ -92,6 +92,6 @@ describe("tiny machine execution loop testing", () => {
 					`2 0 0 9 B6A6563A70F71055          `,
 				].join("\n"),
 			),
-		).toBe("Configuration discrepancy: [14] and [15] ");
+		).toBe("Configuration discrepancy: [14] and [15]");
 	});
 });
