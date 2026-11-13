@@ -36,7 +36,11 @@ function renderTokens(parent: HTMLElement, node: PrismNode): void {
 	if (typeof node === "string") parent.appendText(node);
 	else if (Array.isArray(node))
 		for (const child of node) renderTokens(parent, child);
-	else renderTokens(parent.createSpan({ cls: `token ${node.type}` }), node.content);
+	else
+		renderTokens(
+			parent.createSpan({ cls: `token ${node.type}` }),
+			node.content,
+		);
 }
 
 // fence flavours: plain `syrup` only highlights; `add` feeds the note's shared file;

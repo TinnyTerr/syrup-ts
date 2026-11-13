@@ -9,8 +9,10 @@ const BANNER =
 const args = new Set(Bun.argv.slice(2));
 const hasFlags = args.size > 0;
 const buildAll = args.has("--all");
-const buildLib = buildAll || args.has("--lib") || (!hasFlags && !args.has("--help"));
-const buildCli = buildAll || args.has("--cli") || (!hasFlags && !args.has("--help"));
+const buildLib =
+	buildAll || args.has("--lib") || (!hasFlags && !args.has("--help"));
+const buildCli =
+	buildAll || args.has("--cli") || (!hasFlags && !args.has("--help"));
 const buildWeb = buildAll || args.has("--web");
 const buildObsidian = buildAll || args.has("--obsidian");
 const buildVscode = buildAll || args.has("--vscode");
@@ -161,12 +163,27 @@ if (buildObsidian) {
 	const extObsidianDir = resolve(rootDir, "../syrup-obsidian");
 	if (existsSync(extObsidianDir)) {
 		console.log("🔄 Syncing to ../syrup-obsidian...");
-		cpSync(resolve(rootDir, "obsidian/main.js"), resolve(extObsidianDir, "main.js"));
-		cpSync(resolve(rootDir, "obsidian/manifest.json"), resolve(extObsidianDir, "manifest.json"));
-		cpSync(resolve(rootDir, "obsidian/styles.css"), resolve(extObsidianDir, "styles.css"));
+		cpSync(
+			resolve(rootDir, "obsidian/main.js"),
+			resolve(extObsidianDir, "main.js"),
+		);
+		cpSync(
+			resolve(rootDir, "obsidian/manifest.json"),
+			resolve(extObsidianDir, "manifest.json"),
+		);
+		cpSync(
+			resolve(rootDir, "obsidian/styles.css"),
+			resolve(extObsidianDir, "styles.css"),
+		);
 		if (existsSync(resolve(extObsidianDir, "plugin"))) {
-			cpSync(resolve(rootDir, "obsidian/main.ts"), resolve(extObsidianDir, "plugin/main.ts"));
-			cpSync(resolve(rootDir, "obsidian/highlight.ts"), resolve(extObsidianDir, "plugin/highlight.ts"));
+			cpSync(
+				resolve(rootDir, "obsidian/main.ts"),
+				resolve(extObsidianDir, "plugin/main.ts"),
+			);
+			cpSync(
+				resolve(rootDir, "obsidian/highlight.ts"),
+				resolve(extObsidianDir, "plugin/highlight.ts"),
+			);
 		}
 	}
 }
@@ -175,7 +192,9 @@ if (buildObsidian) {
 if (buildVscode) {
 	console.log("🔌 Packaging VS Code extension...");
 	await $`bun ./shared/gen-textmate.ts`.cwd(rootDir);
-	await $`bunx @vscode/vsce package --no-dependencies`.cwd(resolve(rootDir, "vscode"));
+	await $`bunx @vscode/vsce package --no-dependencies`.cwd(
+		resolve(rootDir, "vscode"),
+	);
 }
 
 console.log("✅ Build finished successfully!");

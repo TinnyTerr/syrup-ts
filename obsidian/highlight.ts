@@ -43,7 +43,7 @@ export interface CMStream {
 	eatSpace(): boolean;
 	eol(): boolean;
 	match(pattern: string | RegExp): boolean | RegExpMatchArray | null;
-	next(): string | void;
+	next(): string | undefined;
 }
 
 interface CodeMirrorStatic {
@@ -67,7 +67,10 @@ const cmSources: [string, string][] = [
 	["operator", RULES.operator],
 	["bracket", RULES.punctuation],
 ];
-const cmRules = cmSources.map(([name, src]): [string, RegExp] => [name, new RegExp("^(?:" + src + ")")]);
+const cmRules = cmSources.map(([name, src]): [string, RegExp] => [
+	name,
+	new RegExp(`^(?:${src})`),
+]);
 
 export function defineCm5Mode(): boolean {
 	const CM = codeMirror();
@@ -119,7 +122,10 @@ const askCmSources: [string, string][] = [
 	["variable-2", ASK_RULES.constructor],
 	["bracket", ASK_RULES.punctuation],
 ];
-const askCmRules = askCmSources.map(([name, src]): [string, RegExp] => [name, new RegExp("^(?:" + src + ")")]);
+const askCmRules = askCmSources.map(([name, src]): [string, RegExp] => [
+	name,
+	new RegExp(`^(?:${src})`),
+]);
 
 export function defineAskCm5Mode(): boolean {
 	const CM = codeMirror();

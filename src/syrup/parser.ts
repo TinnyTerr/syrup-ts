@@ -521,7 +521,7 @@ function matchParen(text: string, open: number): number {
 // `table f` then indented rows `00 | 1`; brackets and spaces are ignored, `_` is a wildcard.
 function parseTable(chunk: string): Stmt {
 	const [first, ...body] = chunk.trim().split("\n");
-	const m = /^table\s+([A-Za-z][A-Za-z0-9]*)$/.exec(first!.trim());
+	const m = /^table\s+([A-Za-z][A-Za-z0-9]*)$/.exec(first?.trim());
 	if (!m) throw new ParseError(`malformed table: "${chunk}"`);
 	const rows = body
 		.filter((l) => l.trim() !== "")
@@ -547,8 +547,8 @@ function parseExperiment(chunk: string): Stmt {
 
 	const fa = /^forall\s+(.*?)\s*->\s*(.*)$/s.exec(rest);
 	if (fa) {
-		const vars = fa[1]!
-			.split(",")
+		const vars = fa[1]
+			?.split(",")
 			.map((v) => v.trim())
 			.filter((v) => v !== "");
 		const body = fa[2]!;

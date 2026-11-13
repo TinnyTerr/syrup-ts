@@ -283,7 +283,7 @@ export function dnf(reg: Registry, name: string): Def {
 				throw new RuntimeError(
 					`Circuit \`${name}\` has an undetermined output, so it has no disjunctive normal form.`,
 				);
-			if (b === 1) minterms[i]!.push(row);
+			if (b === 1) minterms[i]?.push(row);
 		});
 		row++;
 	}

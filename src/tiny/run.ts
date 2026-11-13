@@ -2,15 +2,20 @@ import {
 	hasOperand,
 	Instructions,
 	memoryLocation,
-	TinyMachineRuntimeError,
 	type TinyMachineProgram,
+	TinyMachineRuntimeError,
 } from "./ast";
 import { parseTinyMachine } from "./parser";
 
 export function run(
 	source: string,
 	_input: string | string[] | number[],
+	options: { string: boolean } = { string: true },
 ): string {
+	if (!options.string) {
+		throw new Error("Non-string output is not yet implemented");
+	}
+
 	// TODO: add object based output, to better display the output, and to allow for better testing
 	const obj = parseTinyMachine(source);
 	// @ts-expect-error ts is unable to realise all the elements are made to string

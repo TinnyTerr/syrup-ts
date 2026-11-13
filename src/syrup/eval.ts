@@ -414,8 +414,8 @@ export function runComponent(
 				def: c.def!,
 				pending: [],
 			};
-			bindPatList(c.def!.params, inputs, frame.env);
-			outputs = evalExprList(c.def!.rhs, frame, "", ctx);
+			bindPatList(c.def?.params, inputs, frame.env);
+			outputs = evalExprList(c.def?.rhs, frame, "", ctx);
 			flushPending(frame);
 		}
 		if (ctx.used.size === 0) return { outputs, nextMem };
