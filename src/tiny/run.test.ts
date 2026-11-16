@@ -94,6 +94,7 @@ describe("tiny machine execution loop testing", () => {
 			run("0 0 0 0  6B95F4EAE74F3100", ["A"], { string: true, dots: true }),
 		).toBe(
 			[
+				`0 0 0 0  6B95F4EAE74F3100  GET - A -`,
 				`1 . . A  ................  CCF - - -`,
 				`2 . . .  ................  ROR - - -`,
 				`3 . 4 5  ................  STA F - -`,

@@ -70,29 +70,32 @@ export function runSteps(
 	return rows;
 }
 
+export type RunOptions = {
+	/** stringify the trace (default true) */
+	string?: boolean;
+	/** print register/memory values unchanged from the previous row as `.` */
+	dots?: boolean;
+};
+
 export function run(
 	source: string,
 	input: string | string[] | number[],
+	options?: RunOptions & { string?: true },
 ): string;
 export function run(
 	source: string,
 	input: string | string[] | number[],
-	options: { string: true; dots: true },
-): string;
+	options: RunOptions & { string: false },
+): TinyMachineProgram[];
 export function run(
 	source: string,
 	input: string | string[] | number[],
-	options: { string: false; dots: true },
-): never;
-export function run(
-	source: string,
-	input: string | string[] | number[],
-	options: { string: boolean; dots: boolean } = { string: true, dots: false },
+	{ string = true, dots = false }: RunOptions = {},
 ): string | TinyMachineProgram[] {
 	const rows = runSteps(source, input);
-	if (!options.string) return rows;
+	if (!string) return rows;
 	return rows
-		.flatMap((v, i, arr) => stringifyStep(v, options.dots, arr[i - 1]))
+		.flatMap((row, i) => stringifyStep(row, dots ? rows[i - 1] : undefined))
 		.join("\n");
 }
 
@@ -175,9 +178,14 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 		 * ```
 		 */
 		case Instructions.ROL:
-			r.ac = ((r.ac << 1) | (r.ac >> 3)) & 0x0f;
-			r.fr.of = !!(((r.ac & 0x08) >> 3) ^ ((r.ac & 0x04) >> 2));
+		{
+			const a = r.ac;
+			r.ac = ((a << 1) | (r.fr.cf ? 1 : 0)) & 0x0f;
+			r.fr.cf = (a & 0x08) !== 0;
+			// sign bit changed
+			r.fr.of = ((a ^ r.ac) & 0x08) !== 0;
 			r.fr.zf = r.ac === 0;
+		}
 			break;
 		// Rotate right
 		/**
@@ -190,8 +198,14 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 		 * ```
 		 */
 		case Instructions.ROR:
-			r.ac = ((r.ac >> 1) | (r.ac << 3)) & 0x0f;
+		{
+			const a = r.ac;
+			r.ac = (a >> 1) | (r.fr.cf ? 0x08 : 0);
+			r.fr.cf = (a & 0x01) !== 0;
+			// sign bit changed
+			r.fr.of = ((a ^ r.ac) & 0x08) !== 0;
 			r.fr.zf = r.ac === 0;
+		}
 			break;
 		// Add with carry
 		case Instructions.ADC: {
@@ -234,50 +248,35 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 	return info;
 }
 
-function stringifyStep(row: TinyMachineProgram): string[];
+const hex = (n: number | undefined) =>
+	n === undefined ? "-" : n.toString(16).toUpperCase();
+
+const flagsOf = ({ registers: { fr } }: TinyMachineProgram) =>
+	(fr.hf ? 8 : 0) | (fr.of ? 4 : 0) | (fr.zf ? 2 : 0) | (fr.cf ? 1 : 0);
+
 /**
- *
  * @param row State of the machine
- * @param dots Allows the machine to stringify values that don't change as dots, instead of their current values
- * @param pvSt Previous state of the machine to allow dots to be shown
+ * @param prev Previous row; when given, registers and memory cells that are
+ * unchanged from it print as `.`. The instruction columns are never dotted.
  */
 function stringifyStep(
 	row: TinyMachineProgram,
-	dots: boolean,
-	pvSt?: TinyMachineProgram,
-): string[];
-function stringifyStep(
-	row: TinyMachineProgram,
-	dots: boolean = false,
-	pvSt?: TinyMachineProgram,
+	prev?: TinyMachineProgram,
 ): string[] {
 	const { registers: r, memory, opr, error } = row;
-	const fr = Number(
-		`0b${r.fr.hf ? 1 : 0}${r.fr.of ? 1 : 0}${r.fr.zf ? 1 : 0}${r.fr.cf ? 1 : 0}`,
-	);
-	const hex = (n: number | undefined) =>
-		n === undefined ? "-" : n.toString(16).toUpperCase();
-	let line = `${dot(hex(r.ip), dots, Number(pvSt?.registers?.ip).toString(16).toUpperCase())} ${dot(hex(r.li), dots, Number(pvSt?.registers?.li).toString(16).toUpperCase())} ${dot(
-		hex(fr),
-		dots,
-		Number(
-			`0b${pvSt?.registers?.fr.hf ? 1 : 0}${pvSt?.registers?.fr.of ? 1 : 0}${pvSt?.registers?.fr.zf ? 1 : 0}${pvSt?.registers?.fr.cf ? 1 : 0}`,
-		)
-			.toString(16)
-			.toUpperCase(),
-	)} ${dot(hex(r.ac), dots, Number(pvSt?.registers?.ac).toString(16).toUpperCase())}  ${memory.map((v, i) => dot(hex(v), dots, Number(pvSt?.memory?.[i]).toString(16).toUpperCase())).join("")}`;
+	const cell = (cur: number, old: number | undefined) =>
+		prev && cur === old ? "." : hex(cur);
+
+	let line = [
+		cell(r.ip, prev?.registers.ip),
+		cell(r.li, prev?.registers.li),
+		cell(flagsOf(row), prev && flagsOf(prev)),
+		cell(r.ac, prev?.registers.ac),
+	].join(" ");
+	line += `  ${memory.map((v, i) => cell(v, prev?.memory[i])).join("")}`;
 	if (opr) {
-		line += `  ${Instructions[opr.opera]} ${dot(hex(opr.oper), dots, Number(pvSt?.opr?.oper).toString(16).toUpperCase())} ${dot(hex(opr.in), dots, Number(pvSt?.opr?.in).toString(16).toUpperCase())} ${dot(hex(opr.out), dots, Number(pvSt?.opr?.out).toString(16).toUpperCase())}`;
+		line += `  ${Instructions[opr.opera]} ${hex(opr.oper)} ${hex(opr.in)} ${hex(opr.out)}`;
 	}
 	// an errored row is the state with no instruction, then the error line
 	return error ? [line, `Runtime Error: ${error}`] : [line];
-}
-
-function dot(current: string, dots: boolean, previous?: string): string {
-	// previous defaults to unreachable value
-	return dots
-		? current === (previous ?? "ewfwfwefwfwfwe")
-			? "."
-			: current
-		: current;
 }
