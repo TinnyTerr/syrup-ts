@@ -22,7 +22,17 @@ export function parseTinyMachine(source: string): TinyMachineProgram {
 		v === undefined || v === "-" ? undefined : hex(v);
 
 	const [ipStr, liStr, frStr, acStr, memoryStr, opera, oper, inp, out] =
-		parts as [string, string, string, string, string, string, string, string, string];
+		parts as [
+			string,
+			string,
+			string,
+			string,
+			string,
+			string,
+			string,
+			string,
+			string,
+		];
 	const fr = hex(frStr);
 
 	let opr: TinyMachineProgram["opr"];
@@ -31,7 +41,12 @@ export function parseTinyMachine(source: string): TinyMachineProgram {
 		if (code === undefined) {
 			throw new TinyMachineParseError(`Unknown instruction ${opera}`);
 		}
-		opr = { opera: code, oper: optHex(oper), in: optHex(inp), out: optHex(out) };
+		opr = {
+			opera: code,
+			oper: optHex(oper),
+			in: optHex(inp),
+			out: optHex(out),
+		};
 	}
 
 	const result: TinyMachineProgram = {

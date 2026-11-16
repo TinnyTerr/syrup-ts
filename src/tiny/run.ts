@@ -77,16 +77,23 @@ export function run(
 export function run(
 	source: string,
 	input: string | string[] | number[],
-	options: { string: false },
-): TinyMachineProgram[];
+	options: { string: true; dots: true },
+): string;
 export function run(
 	source: string,
 	input: string | string[] | number[],
-	options: { string: boolean } = { string: true },
+	options: { string: false; dots: true },
+): never;
+export function run(
+	source: string,
+	input: string | string[] | number[],
+	options: { string: boolean; dots: boolean } = { string: true, dots: false },
 ): string | TinyMachineProgram[] {
 	const rows = runSteps(source, input);
 	if (!options.string) return rows;
-	return rows.flatMap(stringifyStep).join("\n");
+	return rows
+		.flatMap((v, i, arr) => stringifyStep(v, options.dots, arr[i - 1]))
+		.join("\n");
 }
 
 type StepInfo = { code: Instructions; opr?: number; in?: number; out?: number };
@@ -97,6 +104,13 @@ type StepInfo = { code: Instructions; opr?: number; in?: number; out?: number };
  *
  * The trace row for a step is printed from the state *before* this runs, so
  * effects (e.g. STA changing memory) show up on the next row.
+ *
+ * Extract:
+ * OF is set whenever an arithmetic operation (ROL, ROR, or ADC),
+ * leaves a misleading AC, under a two’s complement interpretation—exactly
+ * if the carry into the sign bit differs from the carry out.
+ * E.g., if CF = 0, AC = 8, then the two’s complement meaning of AC is −8:
+ * if we then execute ROR, we get AC = 4; CF = 0; OF = 1"
  */
 function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 	const r = m.registers;
@@ -111,25 +125,32 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 	const mem = (a: number) => m.memory[memoryLocation(a)] ?? 0;
 
 	switch (code) {
+		// Halt
 		case Instructions.HLT:
 			r.fr.hf = true;
 			break;
+		// Jump to address
 		case Instructions.JMP:
 			nextIp = memoryLocation(opr ?? 0);
 			break;
+		// Jump if zero
 		case Instructions.JZE:
 			if (r.fr.zf) nextIp = memoryLocation(opr ?? 0);
 			break;
+		// Jump if not zero
 		case Instructions.JNZ:
 			if (!r.fr.zf) nextIp = memoryLocation(opr ?? 0);
 			break;
+		// Load accumulator from address
 		case Instructions.LDA:
 			r.ac = mem(opr ?? 0);
 			r.fr.zf = r.ac === 0;
 			break;
+		// Store accumulator to address
 		case Instructions.STA:
 			m.memory[memoryLocation(opr ?? 0)] = r.ac;
 			break;
+		// Get input into accumulator
 		case Instructions.GET: {
 			const input = inputs.shift();
 			if (input === undefined)
@@ -139,17 +160,40 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 			info.in = r.ac;
 			break;
 		}
+		// Put accumulator to output
 		case Instructions.PUT:
 			info.out = r.ac;
 			break;
+		// Rotate left
+		/**
+		 * Double and carry-in
+		 * Operation:
+		 * ```
+		 * CF|AC = AC|CF
+		 * ZF = (AC == 0)
+		 * OF = (AC[3] XOR AC[2])
+		 * ```
+		 */
 		case Instructions.ROL:
 			r.ac = ((r.ac << 1) | (r.ac >> 3)) & 0x0f;
+			r.fr.of = !!(((r.ac & 0x08) >> 3) ^ ((r.ac & 0x04) >> 2));
 			r.fr.zf = r.ac === 0;
 			break;
+		// Rotate right
+		/**
+		 * Halve and carry-out
+		 * Operation:
+		 * ```
+		 * AC|CF = CF|AC
+		 * ZF = (AC == 0)
+		 * OF = (AC[3] XOR AC[2])
+		 * ```
+		 */
 		case Instructions.ROR:
 			r.ac = ((r.ac >> 1) | (r.ac << 3)) & 0x0f;
 			r.fr.zf = r.ac === 0;
 			break;
+		// Add with carry
 		case Instructions.ADC: {
 			const a = r.ac;
 			const b = mem(opr ?? 0);
@@ -162,18 +206,23 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 			r.fr.zf = r.ac === 0;
 			break;
 		}
+		// Clear carry flag
 		case Instructions.CCF:
 			r.fr.cf = false;
 			break;
+		// Set carry flag
 		case Instructions.SCF:
 			r.fr.cf = true;
 			break;
+		// Decrement loop index
 		case Instructions.DEL:
 			r.li = (r.li - 1) & 0x0f;
 			break;
+		// Load loop index
 		case Instructions.LDL:
 			r.li = opr ?? 0;
 			break;
+		// Flip accumulator
 		case Instructions.FLA:
 			r.ac = (15 - r.ac) & 0x0f;
 			r.fr.zf = r.ac === 0;
@@ -185,17 +234,50 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 	return info;
 }
 
-function stringifyStep(row: TinyMachineProgram): string[] {
+function stringifyStep(row: TinyMachineProgram): string[];
+/**
+ *
+ * @param row State of the machine
+ * @param dots Allows the machine to stringify values that don't change as dots, instead of their current values
+ * @param pvSt Previous state of the machine to allow dots to be shown
+ */
+function stringifyStep(
+	row: TinyMachineProgram,
+	dots: boolean,
+	pvSt?: TinyMachineProgram,
+): string[];
+function stringifyStep(
+	row: TinyMachineProgram,
+	dots: boolean = false,
+	pvSt?: TinyMachineProgram,
+): string[] {
 	const { registers: r, memory, opr, error } = row;
 	const fr = Number(
 		`0b${r.fr.hf ? 1 : 0}${r.fr.of ? 1 : 0}${r.fr.zf ? 1 : 0}${r.fr.cf ? 1 : 0}`,
 	);
 	const hex = (n: number | undefined) =>
 		n === undefined ? "-" : n.toString(16).toUpperCase();
-	let line = `${hex(r.ip)} ${hex(r.li)} ${hex(fr)} ${hex(r.ac)}  ${memory.map(hex).join("")}`;
+	let line = `${dot(hex(r.ip), dots, Number(pvSt?.registers?.ip).toString(16).toUpperCase())} ${dot(hex(r.li), dots, Number(pvSt?.registers?.li).toString(16).toUpperCase())} ${dot(
+		hex(fr),
+		dots,
+		Number(
+			`0b${pvSt?.registers?.fr.hf ? 1 : 0}${pvSt?.registers?.fr.of ? 1 : 0}${pvSt?.registers?.fr.zf ? 1 : 0}${pvSt?.registers?.fr.cf ? 1 : 0}`,
+		)
+			.toString(16)
+			.toUpperCase(),
+	)} ${dot(hex(r.ac), dots, Number(pvSt?.registers?.ac).toString(16).toUpperCase())}  ${memory.map((v, i) => dot(hex(v), dots, Number(pvSt?.memory?.[i]).toString(16).toUpperCase())).join("")}`;
 	if (opr) {
-		line += `  ${Instructions[opr.opera]} ${hex(opr.oper)} ${hex(opr.in)} ${hex(opr.out)}`;
+		line += `  ${Instructions[opr.opera]} ${dot(hex(opr.oper), dots, Number(pvSt?.opr?.oper).toString(16).toUpperCase())} ${dot(hex(opr.in), dots, Number(pvSt?.opr?.in).toString(16).toUpperCase())} ${dot(hex(opr.out), dots, Number(pvSt?.opr?.out).toString(16).toUpperCase())}`;
 	}
 	// an errored row is the state with no instruction, then the error line
 	return error ? [line, `Runtime Error: ${error}`] : [line];
+}
+
+function dot(current: string, dots: boolean, previous?: string): string {
+	// previous defaults to unreachable value
+	return dots
+		? current === (previous ?? "ewfwfwefwfwfwe")
+			? "."
+			: current
+		: current;
 }

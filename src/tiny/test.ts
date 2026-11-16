@@ -22,7 +22,12 @@ export function testRun(
 
 		if (!line) {
 			// the final halted row has no instruction; it's implied by the HLT row
-			if (i === computed.length - 1 && !computedLine?.opr && !computedLine?.error) break;
+			if (
+				i === computed.length - 1 &&
+				!computedLine?.opr &&
+				!computedLine?.error
+			)
+				break;
 			message = `What next?`;
 			break;
 		}
@@ -33,7 +38,8 @@ export function testRun(
 			message = `Something went wrong`;
 			break;
 		}
-		message = discrepancy(computedLine, line) || compareOpr(computedLine.opr, line.opr);
+		message =
+			discrepancy(computedLine, line) || compareOpr(computedLine.opr, line.opr);
 		if (message) break;
 	}
 
@@ -53,7 +59,9 @@ function discrepancy(
 	for (const k of ["ip", "li", "ac"] as const) {
 		if (computed.registers[k] !== user.registers[k]) bad.push(k);
 	}
-	if (JSON.stringify(computed.registers.fr) !== JSON.stringify(user.registers.fr)) {
+	if (
+		JSON.stringify(computed.registers.fr) !== JSON.stringify(user.registers.fr)
+	) {
 		bad.push("fr");
 	}
 	for (let i = 0; i < computed.memory.length; i++) {
