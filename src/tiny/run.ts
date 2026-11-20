@@ -70,29 +70,38 @@ export function runSteps(
 	return rows;
 }
 
+type RunInput = string | string[] | number[];
+
+export function run(source: string, input: RunInput): string;
 export function run(
 	source: string,
-	input: string | string[] | number[],
+	input: RunInput,
+	opts: { string: true; dots?: boolean },
 ): string;
 export function run(
 	source: string,
-	input: string | string[] | number[],
-	options: { string: true; dots: true },
-): string;
-export function run(
-	source: string,
-	input: string | string[] | number[],
-	options: { string: false; dots: true },
+	input: RunInput,
+	opts: { string: false; dots: true },
 ): never;
 export function run(
 	source: string,
-	input: string | string[] | number[],
-	options: { string: boolean; dots: boolean } = { string: true, dots: false },
+	input: RunInput,
+	opts: { string: false; dots?: false },
+): TinyMachineProgram[];
+export function run(
+	source: string,
+	input: RunInput,
+	opts?: { string?: boolean; dots?: boolean },
+): string | TinyMachineProgram[];
+export function run(
+	source: string,
+	input: RunInput,
+	opts: { string?: boolean; dots?: boolean } = {},
 ): string | TinyMachineProgram[] {
 	const rows = runSteps(source, input);
-	if (!options.string) return rows;
+	if (opts.string === false) return rows;
 	return rows
-		.flatMap((v, i, arr) => stringifyStep(v, options.dots, arr[i - 1]))
+		.flatMap((v, i, arr) => stringifyStep(v, opts.dots ?? false, arr[i - 1]))
 		.join("\n");
 }
 
