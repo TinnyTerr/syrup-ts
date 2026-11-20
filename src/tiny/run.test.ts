@@ -145,7 +145,7 @@ test("get out of loops", () => {
 	let out = "";
 
 	output.forEach((v) => {
-		if (v.opr?.out) out += v.opr.out.toString(16).toUpperCase();
+		if (v.opr?.out !== undefined) out += v.opr.out.toString(16).toUpperCase();
 	});
 
 	expect(out).toBe("0123456789");

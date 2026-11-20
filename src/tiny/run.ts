@@ -231,10 +231,11 @@ function machineLoop(m: TinyMachineProgram, inputs: string[]): StepInfo {
 		// Decrement loop index
 		case Instructions.DEL:
 			r.li = (r.li - 1) & 0x0f;
+			r.fr.zf = r.li === 0;
 			break;
-		// Load loop index
+		// Load loop index from address
 		case Instructions.LDL:
-			r.li = opr ?? 0;
+			r.li = mem(opr ?? 0);
 			break;
 		// Flip accumulator
 		case Instructions.FLA:
