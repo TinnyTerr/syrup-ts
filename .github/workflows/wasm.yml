@@ -1,0 +1,51 @@
+name: wasm
+
+# Builds upstream Syrup + ask to wasm (see wasm/Makefile) and the Tiny page.
+# Called by pages.yml and build.yml; also runnable on its own.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # pinned: FLAVOUR 9.10 is what wasm/ is tested against (Syrup needs base < 4.22)
+  GHC_WASM_META: 8079eb96bbc63823d99ad8acaff0765532625474
+  FLAVOUR: "9.10"
+
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ghc-wasm
+          key: ghc-wasm-${{ env.GHC_WASM_META }}-${{ env.FLAVOUR }}-${{ hashFiles('wasm/hs/*.cabal', 'wasm/hs/cabal.project') }}
+          restore-keys: ghc-wasm-${{ env.GHC_WASM_META }}-${{ env.FLAVOUR }}-
+
+      - name: Install ghc-wasm-meta
+        # a restore-keys hit already has the toolchain, only the cabal store is stale
+        run: |
+          [ -f ~/.ghc-wasm/env ] && exit 0
+          mkdir -p "$RUNNER_TEMP/ghc-wasm-meta"
+          curl -f -L --retry 5 "https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/archive/$GHC_WASM_META/ghc-wasm-meta-$GHC_WASM_META.tar.gz" \
+            | tar xz --strip-components=1 -C "$RUNNER_TEMP/ghc-wasm-meta"
+          "$RUNNER_TEMP/ghc-wasm-meta/setup.sh"
+
+      - run: ~/.ghc-wasm/add_to_github_path.sh
+      - run: wasm32-wasi-cabal update
+
+      - name: Build
+        working-directory: wasm
+        run: make zip
+
+      - uses: actions/upload-artifact@v4
+        with: { name: wasm-pages, path: dist/wasm/ }
+      - uses: actions/upload-artifact@v4
+        with: { name: wasm-zip, path: dist/syrup-wasm.zip }
