@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Machine</title>
+<link rel="stylesheet" href="./page.css">
+</head>
+<body>
+<nav><a href="./index.html">index</a><a href="./syrup.html">Syrup</a><a href="./ask.html">ask</a><a href="./tiny.html" aria-current="page">Tiny</a></nav>
+<div id="bar">
+	<button type="button" id="run" disabled>Run</button>
+	<label><input type="checkbox" id="live"> live</label>
+	<label>inputs (hex) <input type="text" id="inputs" size="24"></label>
+	<label><input type="checkbox" id="dots"> dots</label>
+	<span id="status"></span>
+</div>
+<div id="panes">
+	<textarea id="input" spellcheck="false"></textarea>
+	<pre id="output"></pre>
+</div>
+<script type="module" src="./tiny.js"></script>
+</body>
+</html>

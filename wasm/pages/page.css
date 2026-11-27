@@ -1,0 +1,56 @@
+:root {
+	color-scheme: light dark;
+}
+body {
+	font-family: sans-serif;
+	margin: 1em;
+}
+nav {
+	margin-bottom: 0.75em;
+}
+nav a {
+	margin-right: 1em;
+}
+nav a[aria-current] {
+	font-weight: bold;
+	text-decoration: none;
+	color: inherit;
+}
+#bar {
+	margin-bottom: 0.5em;
+	display: flex;
+	gap: 1em;
+	align-items: center;
+	flex-wrap: wrap;
+}
+#status {
+	color: GrayText;
+}
+#panes {
+	display: flex;
+	gap: 1em;
+}
+textarea,
+#output {
+	flex: 1;
+	min-width: 0;
+	height: 80vh;
+	margin: 0;
+	padding: 0.5em;
+	box-sizing: border-box;
+	font-family: "Lucida Sans Typewriter", "Lucida Console", monaco, monospace;
+	font-size: 13px;
+	border: 1px solid #aaa;
+	overflow: auto;
+	tab-size: 2;
+}
+pre#output {
+	white-space: pre;
+}
+div#output svg {
+	max-width: 100%;
+	height: auto;
+}
+input[type="text"] {
+	font-family: monospace;
+}

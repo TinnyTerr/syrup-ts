@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ask</title>
+<link rel="stylesheet" href="./page.css">
+</head>
+<body>
+<nav><a href="./index.html">index</a><a href="./syrup.html">Syrup</a><a href="./ask.html" aria-current="page">ask</a><a href="./tiny.html">Tiny</a></nav>
+<div id="bar">
+	<button type="button" id="run" disabled>Check</button>
+	<label><input type="checkbox" id="live"> live</label>
+	<select id="example"></select>
+	<span id="status">loading wasm...</span>
+</div>
+<div id="panes">
+	<textarea id="input" spellcheck="false"></textarea>
+	<pre id="output"></pre>
+</div>
+<script type="module" src="./ask.js"></script>
+</body>
+</html>

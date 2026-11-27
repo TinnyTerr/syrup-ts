@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Syrup</title>
+<link rel="stylesheet" href="./page.css">
+<link rel="stylesheet" href="../vendor/Syrup/syrup.css">
+</head>
+<body>
+<nav><a href="./index.html">index</a><a href="./syrup.html" aria-current="page">Syrup</a><a href="./ask.html">ask</a><a href="./tiny.html">Tiny</a></nav>
+<div id="bar">
+	<button type="button" id="run" disabled>Run</button>
+	<label><input type="checkbox" id="live"> live</label>
+	<label><input type="checkbox" id="html" checked> html</label>
+	<label><input type="checkbox" id="quiet"> quiet</label>
+	<label>experiment limit <input type="number" id="limit" min="0" style="width:5em"></label>
+	<select id="example"></select>
+	<span id="status">loading wasm...</span>
+</div>
+<div id="panes">
+	<textarea id="input" spellcheck="false"></textarea>
+	<div id="output"></div>
+</div>
+<script type="module" src="./syrup.js"></script>
+</body>
+</html>
