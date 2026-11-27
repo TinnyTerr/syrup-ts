@@ -15,7 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  wasm:
+    uses: ./.github/workflows/wasm.yml
+
   build:
+    needs: wasm
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +31,10 @@ jobs:
           mkdir -p dist/pages
           cp dist/web/* dist/pages/
           cp web/demo.html dist/pages/index.html
+      - uses: actions/download-artifact@v4
+        with: { name: wasm-pages, path: dist/pages/wasm }
+      - uses: actions/download-artifact@v4
+        with: { name: wasm-zip, path: dist/pages }
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/pages
