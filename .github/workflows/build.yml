@@ -90,9 +90,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: vscode-extension, path: out/vscode/ }
 
+  wasm:
+    needs: test
+    uses: ./.github/workflows/wasm.yml
+
   release:
     if: inputs.release_tag != ''
-    needs: [library, executables, editors]
+    needs: [library, executables, editors, wasm]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -106,6 +110,7 @@ jobs:
           # Obsidian's release format wants these three as loose assets
           cp artifacts/obsidian-plugin/{manifest.json,main.js,styles.css} rel/
           (cd artifacts/web-assets && zip -r ../../rel/syrup-web.zip .)
+          cp artifacts/wasm-zip/syrup-wasm.zip rel/
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
