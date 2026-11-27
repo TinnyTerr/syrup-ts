@@ -146,6 +146,12 @@ Locally: `bun run build:web`, `bun run build:exe`, `bun run build:editors`.
 `.github/workflows/pages.yml` builds `dist/web` (including the React demo bundle)
 plus `web/demo.html` and deploys the demo to GitHub Pages on pushes to `main`
 (or manually from Actions -> pages -> Run workflow).
+The same deploy also serves the wasm pages under `/wasm/` and the zip at
+`/syrup-wasm.zip`.
+
+`.github/workflows/wasm.yml` is the reusable wasm build (`wasm/Makefile`, see
+below), called by both workflows; releases also get `syrup-wasm.zip`. It installs
+ghc-wasm-meta pinned to a commit with `FLAVOUR=9.10` and caches `~/.ghc-wasm`.
 
 ## Wasm pages (upstream Haskell)
 
