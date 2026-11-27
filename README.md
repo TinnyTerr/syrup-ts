@@ -147,6 +147,32 @@ Locally: `bun run build:web`, `bun run build:exe`, `bun run build:editors`.
 plus `web/demo.html` and deploys the demo to GitHub Pages on pushes to `main`
 (or manually from Actions -> pages -> Run workflow).
 
+## Wasm pages (upstream Haskell)
+
+`wasm/` builds the original Haskell implementations to wasm with the GHC wasm
+backend and bundles them, plus the Tiny Machine from `src/tiny` as is, into
+static pages: `index.html`, `syrup.html` (pigworker/Syrup), `ask.html`
+(msp-strath/ask), `tiny.html`.
+
+```bash
+source ~/.ghc-wasm/env    # wasm32-wasi-ghc >= 9.10 + wasm32-wasi-cabal (ghc-wasm-meta)
+cd wasm
+make                      # clones into wasm/vendor, -> dist/wasm/ + dist/syrup-wasm.zip
+make fetch                # pull upstream again (SYRUP_REF= / ASK_REF= to pin)
+make serve                # dist/wasm on :8000
+```
+
+- `wasm/hs/SyrupWasm.hs` exports `syrup(args, src)` (args newline separated,
+  as the CLI flags); built through cabal since Syrup needs `blaze-html`.
+- `wasm/hs/AskWasm.hs` exports `filth(src)`; only needs boot packages.
+- Syrup always runs with `--source-dot` (there is no `dot` in wasm); the page
+  pulls the dot out of upstream's html and renders it with a bundled
+  `@hpcc-js/wasm-graphviz` instead of the CDN script upstream emits.
+- Output matches upstream's goldens byte for byte, apart from the ones that
+  `display` through native `dot`; those match the native build under `--source-dot`.
+
+`dist/wasm` is static; the server needs the `application/wasm` MIME type.
+
 ## Layout
 
 - `src/syrup/lexer.ts`, `src/syrup/parser.ts` — tokenizer and recursive-descent parser
