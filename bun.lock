@@ -5,12 +5,14 @@
     "": {
       "name": "syrup",
       "dependencies": {
-        "@biomejs/biome": "^2.6.6",
         "mermaid": "^12.0.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
       },
       "devDependencies": {
+        "@biomejs/biome": "^2.6.6",
+        "@bjorn3/browser_wasi_shim": "0.3.0",
+        "@hpcc-js/wasm-graphviz": "^1.30.0",
         "@types/bun": "latest",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
@@ -43,6 +45,8 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.6.6", "", { "os": "win32", "cpu": "x64" }, "sha512-B7KMG26A4I9lAuxwBGMmiVcjMGAeJRoz+pzFt9brRvOAsIrgOu8ptJld5rUWui6tM1uiJwxeJhhDPuAiZtxXdw=="],
 
+    "@bjorn3/browser_wasi_shim": ["@bjorn3/browser_wasi_shim@0.3.0", "", {}, "sha512-FlRBYttPRLcWORzBe6g8nmYTafBkOEFeOqMYM4tAHJzFsQy4+xJA94z85a9BCs8S+Uzfh9LrkpII7DXr2iUVFg=="],
+
     "@braintree/sanitize-url": ["@braintree/sanitize-url@7.1.2", "", {}, "sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA=="],
 
     "@chevrotain/cst-dts-gen": ["@chevrotain/cst-dts-gen@11.1.2", "", { "dependencies": { "@chevrotain/gast": "11.1.2", "@chevrotain/types": "11.1.2", "lodash-es": "4.17.23" } }, "sha512-XTsjvDVB5nDZBQB8o0o/0ozNelQtn2KrUVteIHSlPd2VAV2utEb6JzyCJaJ8tGxACR4RiBNWy5uYUHX2eji88Q=="],
@@ -54,6 +58,8 @@
     "@chevrotain/types": ["@chevrotain/types@11.1.2", "", {}, "sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw=="],
 
     "@chevrotain/utils": ["@chevrotain/utils@11.1.2", "", {}, "sha512-4mudFAQ6H+MqBTfqLmU7G1ZwRzCLfJEooL/fsF6rCX5eePMbGhoy5n4g+G4vlh2muDcsCTJtL+uKbOzWxs5LHA=="],
+
+    "@hpcc-js/wasm-graphviz": ["@hpcc-js/wasm-graphviz@1.30.0", "", {}, "sha512-T20IKosOZuex2qV049fQokVJy2MWv8w9Md5V/4mRKCXDf49fBCR50VD1yBlPYHaQlHPsFGRdqXN//r59vZliWQ=="],
 
     "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
